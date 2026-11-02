@@ -1,0 +1,45 @@
+# Copy to terraform.tfvars (git-ignored) and replace every placeholder.
+region      = "us-east-1"
+name_prefix = "lms-prod" # 3-24 lowercase letters, digits, hyphens
+
+# Storefronts at lms.example.com and <tenant>.lms.example.com; the platform takes console., admin.,
+# api-console., api-admin., api. and assets. under it.
+domain          = "lms.example.com"
+route53_zone_id = "<ROUTE53_HOSTED_ZONE_ID>" # automatic certificates + DNS
+# Without a Route53 zone, bring both certificates instead and publish the records from
+# the outputs (dns_records, certificate_validation_records, mail_dns_records):
+# certificate_arn     = "<regional ACM certificate for lms.example.com and *.lms.example.com>"
+# cdn_certificate_arn = "<us-east-1 ACM certificate for assets.lms.example.com>"
+
+# Tenants' custom domains: a regional ACM certificate each, CNAME the domain to
+# load_balancer_dns_name, then verify the domain in the tenant admin.
+# custom_domain_certificate_arns = ["<regional ACM certificate for learn.customer.example>"]
+
+# mail_domain = "example.com" # defaults to domain
+
+# image_tag is passed by `make aws-deploy` (the git commit); set it here to pin a release.
+# image_tag = "0.1.0"
+
+# alarm_email = "oncall@example.com"
+
+# Graviton tasks (cheaper). Build the images to match: PLATFORM=linux/arm64 make aws-deploy
+# cpu_architecture = "ARM64"
+
+# JWT_SECRET, CREDENTIALS_ENCRYPTION_KEY and INTERNAL_API_KEY are generated into
+# <name_prefix>/app.
+
+# Video (EVS) and AI authoring. Keys go in provider_secrets; values there land in
+# Terraform state, so pass "set-me" and replace the secret by hand afterwards:
+#   aws secretsmanager put-secret-value --secret-id <name_prefix>/providers \
+#     --secret-string '{"EVS_API_KEY":"<key>","AI_API_KEY":"<key>"}'
+# then roll the services (make aws-deploy, or force a new deployment).
+# evs_api_url   = "https://video.example.com"
+# ai_provider   = "openai"
+# ai_text_model = "<model id>"
+# provider_secrets = {
+#   EVS_API_KEY                      = "set-me"
+#   AI_API_KEY                       = "set-me"
+#   PLATFORM_RAZORPAY_KEY_ID         = "set-me"
+#   PLATFORM_RAZORPAY_KEY_SECRET     = "set-me"
+#   PLATFORM_RAZORPAY_WEBHOOK_SECRET = "set-me"
+# }

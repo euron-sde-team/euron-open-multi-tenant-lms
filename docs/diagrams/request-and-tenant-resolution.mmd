@@ -1,0 +1,19 @@
+sequenceDiagram
+  autonumber
+  participant B as Browser on northwind.lvh.me
+  participant W as web (Next.js)
+  participant L as learner-api worker
+  participant C as Tenant cache (per worker, 60 s)
+  participant P as Postgres
+  B->>W: GET http://northwind.lvh.me:3620/courses
+  W->>L: middleware: GET /api/v1/tenant/info (X-Tenant-Host)
+  L->>C: subdomain:northwind
+  C-->>L: miss
+  L->>P: tenant_domains, then tenants.slug
+  L-->>W: tenant id, slug
+  W->>L: server component: GET /api/v1/template?slug=courses (X-Tenant-Host)
+  L->>L: tenantStatusGuard
+  L->>P: published tenant_pages WHERE tenant_id = ?
+  L-->>W: sections, theme, layout
+  W-->>B: HTML with critical theme CSS, then TenantThemeProvider
+  B->>L: GET /api/v1/courses (Bearer, X-Tenant-Host)

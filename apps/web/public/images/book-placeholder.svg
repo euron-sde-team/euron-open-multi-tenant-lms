@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="600" viewBox="0 0 400 600" role="img" aria-label="Book cover placeholder">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e2e8f0"/>
+      <stop offset="1" stop-color="#cbd5e1"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="600" fill="url(#g)"/>
+  <rect x="0" y="0" width="22" height="600" fill="#94a3b8" opacity="0.35"/>
+  <g fill="none" stroke="#64748b" stroke-width="10" stroke-linejoin="round" stroke-linecap="round" transform="translate(130 230)">
+    <path d="M10 20 Q70 0 70 20 V130 Q70 112 10 130 Z"/>
+    <path d="M130 20 Q70 0 70 20 V130 Q70 112 130 130 Z"/>
+  </g>
+</svg>

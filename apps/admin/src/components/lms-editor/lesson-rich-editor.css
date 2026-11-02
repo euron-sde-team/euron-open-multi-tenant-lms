@@ -1,0 +1,153 @@
+.lesson-rich-editor .ProseMirror {
+  min-height: 240px;
+  outline: none;
+  padding: 1rem;
+  font-size: 14px;
+  line-height: 1.6;
+  color: hsl(var(--foreground));
+}
+
+.lesson-rich-editor .ProseMirror:focus {
+  outline: none;
+}
+
+.lesson-rich-editor .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  float: left;
+  pointer-events: none;
+  height: 0;
+}
+
+.lesson-rich-editor .ProseMirror p {
+  margin-bottom: 0.8em;
+}
+
+.lesson-rich-editor .ProseMirror h1 {
+  font-size: 1.75em;
+  font-weight: 700;
+  margin-bottom: 0.5em;
+  color: hsl(var(--foreground));
+}
+
+.lesson-rich-editor .ProseMirror h2 {
+  font-size: 1.4em;
+  font-weight: 600;
+  margin-bottom: 0.5em;
+  color: hsl(var(--foreground));
+}
+
+.lesson-rich-editor .ProseMirror h3 {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin-bottom: 0.5em;
+  color: hsl(var(--foreground));
+}
+
+.lesson-rich-editor .ProseMirror ul,
+.lesson-rich-editor .ProseMirror ol {
+  padding-left: 1.5em;
+  margin-bottom: 0.8em;
+}
+
+.lesson-rich-editor .ProseMirror ul {
+  list-style-type: disc;
+}
+
+.lesson-rich-editor .ProseMirror ol {
+  list-style-type: decimal;
+}
+
+.lesson-rich-editor .ProseMirror a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.lesson-rich-editor .ProseMirror blockquote {
+  border-left: 3px solid hsl(var(--border));
+  padding-left: 1em;
+  margin-left: 0;
+  margin-right: 0;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+
+.lesson-rich-editor .ProseMirror pre {
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.8em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.85em;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.lesson-rich-editor .ProseMirror code {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+  padding: 0.15em 0.35em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.85em;
+}
+
+.lesson-rich-editor .ProseMirror pre code {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
+
+.lesson-rich-editor .ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.lesson-rich-editor .ProseMirror hr {
+  border: none;
+  border-top: 1px solid hsl(var(--border));
+  margin: 1.5em 0;
+}
+
+/* Resizable inline image node view (drag the corner handle to resize; align
+   via the toolbar align buttons, which set text-align on the paragraph). */
+.lesson-rich-editor .lesson-img {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  max-width: 100%;
+}
+
+.lesson-rich-editor .lesson-img img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.lesson-rich-editor .lesson-img[data-selected="true"] img {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+.lesson-rich-editor .lesson-img-handle {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: hsl(var(--primary));
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  touch-action: none;
+}
+
+.lesson-rich-editor .lesson-img:hover .lesson-img-handle,
+.lesson-rich-editor .lesson-img[data-selected="true"] .lesson-img-handle {
+  opacity: 1;
+}

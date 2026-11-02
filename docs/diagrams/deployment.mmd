@@ -1,0 +1,33 @@
+flowchart TB
+  user["Browsers<br/>operators, tenant staff, learners"]
+  gw["Stripe, Razorpay<br/>(webhooks)"]
+  subgraph edge["Edge"]
+    waf["WAF (regional)<br/>managed rules, per-IP rate limit"]
+    alb["Application Load Balancer<br/>HTTPS, routed by host"]
+    cf["CloudFront<br/>assets.&lt;domain&gt;"]
+  end
+  subgraph vpc["VPC, private subnets"]
+    subgraph ecs["ECS Fargate"]
+      console["console :3600"]
+      admin["admin :3610"]
+      web["web :3620"]
+      capi["console-api :5076"]
+      aapi["admin-api :5086"]
+      lapi["learner-api :5096"]
+    end
+    rds[("RDS PostgreSQL 16")]
+    redis[("ElastiCache Redis 7")]
+  end
+  s3[("S3 assets bucket")]
+  ses["SES + SNS + SQS"]
+  sm["Secrets Manager + KMS"]
+
+  user --> waf --> alb
+  gw --> alb
+  user --> cf --> s3
+  alb --> console & admin & web & capi & aapi & lapi
+  capi & aapi & lapi --> rds
+  capi & aapi & lapi --> redis
+  capi & aapi & lapi --> s3
+  capi & aapi & lapi --> ses
+  sm -. "injected as env" .-> capi & aapi & lapi

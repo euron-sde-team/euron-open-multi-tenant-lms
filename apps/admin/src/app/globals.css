@@ -1,0 +1,803 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "katex/dist/katex.min.css";
+
+/* Hide scrollbar globally (scroll still works via wheel/trackpad) */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+@layer base {
+  :root {
+    /* Tells the BROWSER which theme we're in, so it draws its OWN widgets to
+       match: <select> popups, date pickers, scrollbars, autofill.
+       Without this, a native <select> on a dark page renders as a white OS menu
+       with a blue system highlight, the app is dark, the dropdown is not.
+       There are 54 native <select>s across this app; this fixes all of them at
+       once, rather than replacing each with a Radix Select. */
+    color-scheme: light;
+
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 163 94% 24%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 72.2% 50.6%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+    --warning: 45.4 93.4% 47.5%;
+    --warning-foreground: 26 83.3% 14.1%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 163 94% 24%;
+    --radius: 0.5rem;
+    --sidebar-width: 280px;
+  }
+
+  .dark {
+    color-scheme: dark;
+
+    /* Shadcn black background (zinc-950) */
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 98%;
+    /* Shadcn white primary buttons */
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    /* Brighter, slightly coral-leaning red for dark mode. Shadcn's default
+       (0 62.8% 30.6%) is a deep muddy red that disappears on near-black
+       backgrounds, error text was unreadable and delete buttons looked
+       like inert dark blobs. The new value (~Tailwind red-400) gives
+       text-destructive ~6:1 contrast on the dark background, while
+       bg-destructive + white foreground stays > 3:1 for button affordances.
+       The slight hue shift toward 4° (vs pure 0°) makes it feel like a
+       warm alert rather than a saturated stop-sign red. */
+    --destructive: 4 86% 64%;
+    --destructive-foreground: 0 0% 98%;
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 144.9 80.4% 10%;
+    --warning: 38 92% 60%;
+    --warning-foreground: 0 0% 9%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* LMS scrollbar: space always reserved (no layout shift), thumb invisible until scroll */
+.scrollbar-lms {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.scrollbar-lms.scrollbar-lms-visible {
+  scrollbar-color: hsl(var(--muted-foreground) / 0.4) transparent;
+}
+.scrollbar-lms::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-lms::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-lms::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+  transition: background 0.15s ease;
+}
+.scrollbar-lms.scrollbar-lms-visible::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.35);
+}
+.scrollbar-lms.scrollbar-lms-visible::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+.scrollbar-lms::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+@layer utilities {
+  .section-padding {
+    padding-top: var(--section-padding-y, 5rem);
+    padding-bottom: var(--section-padding-y, 5rem);
+    padding-left: var(--section-padding-x, 1.5rem);
+    padding-right: var(--section-padding-x, 1.5rem);
+  }
+
+  .container-custom {
+    max-width: var(--container-max-width, 1280px);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--section-padding-x, 1.5rem);
+    padding-right: var(--section-padding-x, 1.5rem);
+  }
+
+  /* Edit mode styles - outline/ring applied by SectionWrapper component to avoid clipping */
+  .edit-mode-section {
+    @apply relative cursor-pointer transition-all duration-200;
+  }
+
+  /* Editable text styles */
+  .editable-text {
+    @apply cursor-text rounded-sm transition-all duration-200;
+  }
+
+  .editable-text:hover {
+    @apply bg-muted/50;
+  }
+
+  .editable-text:focus {
+    @apply bg-muted outline-none ring-2 ring-primary;
+  }
+}
+
+/* Theme preview container - override Tailwind colors with CSS custom properties */
+.page-theme-preview * {
+  --primary: inherit;
+  --primary-foreground: inherit;
+  --secondary: inherit;
+  --secondary-foreground: inherit;
+  --accent: inherit;
+  --accent-foreground: inherit;
+  --background: inherit;
+  --foreground: inherit;
+  --muted: inherit;
+  --muted-foreground: inherit;
+  --card: inherit;
+  --card-foreground: inherit;
+  --border: inherit;
+  --input: inherit;
+  --ring: inherit;
+  --destructive: inherit;
+  --destructive-foreground: inherit;
+  --radius: inherit;
+}
+
+/* Force button colors within preview – use exact class match to avoid
+   overriding opacity variants like bg-primary/10, bg-primary/5, etc. */
+.page-theme-preview button.bg-primary,
+.page-theme-preview a.bg-primary,
+.page-theme-preview .bg-primary {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+.page-theme-preview button.bg-secondary,
+.page-theme-preview a.bg-secondary,
+.page-theme-preview .bg-secondary {
+  background-color: hsl(var(--secondary)) !important;
+  color: hsl(var(--secondary-foreground)) !important;
+}
+
+.page-theme-preview .text-primary {
+  color: hsl(var(--primary)) !important;
+}
+
+.page-theme-preview .border-primary {
+  border-color: hsl(var(--primary)) !important;
+}
+
+.page-theme-preview .ring-primary {
+  --tw-ring-color: hsl(var(--primary)) !important;
+}
+
+/* Blog Landing - pixel-perfect animations */
+.gradient-mesh {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #312e81 100%);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+/* Hero keeps same gradient in dark mode - no .dark override */
+
+@keyframes gradientShift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+/* ── Onboarding: engineered "orb" hero mark ───────────────────────────────
+   Industry-grade take on the wizard's hero icon: a dark glass orb (graphite,
+   with a top light-gloss + inner ring + depth) holding the icon, encircled
+   by a single luminous accent ring whose bright arc slowly orbits, reading
+   as "engine running" while building. A soft ambient glow sits behind it.
+   The `.onb-mark--success` modifier swaps the cool accent for a calm emerald
+   for the "live" reveal. Restrained palette, slow motion = premium.
+   All motion is disabled under prefers-reduced-motion. */
+
+:root {
+  --onb-accent: 224 76% 62%; /* indigo */
+  --onb-accent-2: 262 83% 68%; /* violet */
+}
+
+/* The bright arc orbits the ring. */
+@keyframes onb-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Very gentle scale breathe for the icon, no vertical jumping. */
+@keyframes onb-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Ambient glow behind the orb, breathing in opacity + size only. */
+@keyframes onb-halo-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.62;
+    transform: scale(1.12);
+  }
+}
+
+.onb-mark {
+  position: relative;
+  display: inline-flex;
+  isolation: isolate;
+}
+
+/* Soft ambient glow behind everything. */
+.onb-mark-glow {
+  position: absolute;
+  inset: -32%;
+  z-index: 0;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle,
+    hsl(var(--onb-accent) / 0.4),
+    transparent 65%
+  );
+  filter: blur(14px);
+  animation: onb-halo-pulse 5s ease-in-out infinite;
+}
+
+/* Rotating luminous accent ring. A conic gradient masked to a thin band; the
+   whole element rotates so its bright arc orbits the orb. */
+.onb-mark-ring {
+  position: absolute;
+  inset: -3px;
+  z-index: 1;
+  border-radius: 9999px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 190deg,
+    hsl(var(--onb-accent) / 0.85) 288deg,
+    hsl(var(--onb-accent-2)) 336deg,
+    transparent 360deg
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2.5px),
+    #000 calc(100% - 2.5px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2.5px),
+    #000 calc(100% - 2.5px)
+  );
+  animation: onb-orbit 3.2s linear infinite;
+}
+
+/* A faint static base ring so the band never fully disappears. */
+.onb-mark-ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* The dark glass core that holds the icon. */
+.onb-mark-core {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background:
+    radial-gradient(
+      120% 90% at 30% 18%,
+      rgba(255, 255, 255, 0.16) 0%,
+      rgba(255, 255, 255, 0) 46%
+    ),
+    radial-gradient(
+      90% 80% at 50% 118%,
+      hsl(var(--onb-accent) / 0.4) 0%,
+      transparent 60%
+    ),
+    linear-gradient(158deg, #262d3d 0%, #12151d 100%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    inset 0 -12px 20px -10px rgba(0, 0, 0, 0.6),
+    0 14px 34px -12px rgba(10, 13, 22, 0.75);
+}
+
+.onb-mark-icon {
+  position: relative;
+  z-index: 3;
+  color: rgba(255, 255, 255, 0.96);
+  animation: onb-breathe 4.8s ease-in-out infinite;
+}
+
+/* Success (reveal) variant, calm emerald accent, slower orbit. */
+.onb-mark--success .onb-mark-glow {
+  background: radial-gradient(
+    circle,
+    rgba(16, 185, 129, 0.42),
+    transparent 65%
+  );
+}
+.onb-mark--success .onb-mark-ring {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 200deg,
+    rgba(16, 185, 129, 0.85) 300deg,
+    rgba(52, 211, 153, 1) 340deg,
+    transparent 360deg
+  );
+  animation-duration: 5s;
+}
+.onb-mark--success .onb-mark-core {
+  background:
+    radial-gradient(
+      120% 90% at 30% 18%,
+      rgba(255, 255, 255, 0.16) 0%,
+      rgba(255, 255, 255, 0) 46%
+    ),
+    radial-gradient(
+      90% 80% at 50% 118%,
+      rgba(16, 185, 129, 0.42) 0%,
+      transparent 60%
+    ),
+    linear-gradient(158deg, #1c2b26 0%, #101614 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onb-mark-glow,
+  .onb-mark-ring,
+  .onb-mark-icon {
+    animation: none;
+  }
+}
+
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.dark .card-hover:hover {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.scan-animation {
+  animation: scan 2s ease-in-out infinite;
+}
+
+@keyframes scan {
+  0%,
+  100% {
+    transform: translateY(-100%);
+  }
+  50% {
+    transform: translateY(100%);
+  }
+}
+
+.pulse-animation {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Section scroll entrance animation (preview mode only) */
+.section-entrance {
+  opacity: 0;
+  transform: translateY(2.5rem);
+  transition:
+    opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.section-entrance-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-entrance {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ── Auth page decorative animations ── */
+
+/* Slow organic drift, large orbs */
+@keyframes auth-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(25px, -35px) scale(1.06); }
+  50% { transform: translate(-15px, -55px) scale(0.97); }
+  75% { transform: translate(30px, -20px) scale(1.04); }
+}
+@keyframes auth-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-35px, 30px) scale(1.08); }
+  66% { transform: translate(25px, -35px) scale(0.94); }
+}
+@keyframes auth-drift-3 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(18px, -22px); }
+}
+
+/* Center glow pulse */
+@keyframes auth-glow-pulse {
+  0%, 100% { opacity: 0.04; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 0.09; transform: translate(-50%, -50%) scale(1.12); }
+}
+
+/* Grid shimmer */
+@keyframes auth-grid-shimmer {
+  0%, 100% { opacity: 0.12; }
+  50% { opacity: 0.25; }
+}
+
+/* Small dot twinkle */
+@keyframes auth-twinkle {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.4); }
+}
+
+/* Feature row stagger entrance */
+@keyframes auth-feature-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.auth-drift-1 { animation: auth-drift-1 18s ease-in-out infinite; }
+.auth-drift-2 { animation: auth-drift-2 22s ease-in-out infinite; }
+.auth-drift-3 { animation: auth-drift-3 14s ease-in-out infinite; }
+.auth-drift-2-delayed { animation: auth-drift-2 22s ease-in-out infinite; animation-delay: -8s; }
+.auth-drift-1-delayed { animation: auth-drift-1 18s ease-in-out infinite; animation-delay: -6s; }
+.auth-glow { animation: auth-glow-pulse 8s ease-in-out infinite; }
+.auth-grid { animation: auth-grid-shimmer 6s ease-in-out infinite; }
+.auth-twinkle-1 { animation: auth-twinkle 3s ease-in-out infinite; }
+.auth-twinkle-2 { animation: auth-twinkle 4s ease-in-out infinite; animation-delay: -1.5s; }
+.auth-twinkle-3 { animation: auth-twinkle 3.5s ease-in-out infinite; animation-delay: -2.5s; }
+
+.auth-feature-row {
+  opacity: 0;
+  animation: auth-feature-in 0.5s ease-out forwards;
+}
+.auth-feature-row:nth-child(1) { animation-delay: 0.3s; }
+.auth-feature-row:nth-child(2) { animation-delay: 0.45s; }
+.auth-feature-row:nth-child(3) { animation-delay: 0.6s; }
+.auth-feature-row:nth-child(4) { animation-delay: 0.75s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-drift-1, .auth-drift-2, .auth-drift-3,
+  .auth-drift-2-delayed, .auth-drift-1-delayed,
+  .auth-glow, .auth-grid,
+  .auth-twinkle-1, .auth-twinkle-2, .auth-twinkle-3 {
+    animation: none;
+  }
+  .auth-feature-row {
+    opacity: 1;
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Blog post body.
+ *
+ * Copied from apps/web/src/app/globals.css ON PURPOSE. The admin preview and
+ * the live post must look the same, and the two apps have separate stylesheets
+ * with no shared CSS pipeline. Until there is one, a change to the post styles
+ * in web belongs here too.
+ *
+ * Before this existed the admin preview had NO post styling at all: it leaned
+ * on `prose` classes from @tailwindcss/typography, which is not installed, so
+ * every one of them emitted nothing.
+ * ------------------------------------------------------------------------- */
+/* Blog post content typography */
+.post-content {
+  font-family: Georgia, "Lora", serif;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: hsl(var(--foreground));
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+@media (min-width: 640px) {
+  .post-content {
+    font-size: 1.125rem;
+    line-height: 1.8;
+  }
+}
+
+.post-content h2 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-family: inherit;
+}
+
+@media (min-width: 640px) {
+  .post-content h2 {
+    font-size: 1.75rem;
+    margin-top: 2.5rem;
+    margin-bottom: 1.25rem;
+  }
+}
+
+.post-content h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  font-family: inherit;
+}
+
+@media (min-width: 640px) {
+  .post-content h3 {
+    font-size: 1.375rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+  }
+}
+
+.post-content p {
+  margin-bottom: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .post-content p {
+    margin-bottom: 1.5rem;
+  }
+}
+
+.post-content a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+}
+
+.post-content a:hover {
+  text-decoration: none;
+}
+
+.post-content blockquote {
+  border-left: 4px solid hsl(var(--primary));
+  padding-left: 1rem;
+  margin: 1.5rem 0;
+  font-style: italic;
+  color: hsl(var(--muted-foreground));
+}
+
+@media (min-width: 640px) {
+  .post-content blockquote {
+    padding-left: 1.5rem;
+    margin: 2rem 0;
+  }
+}
+
+.post-content code {
+  background: hsl(var(--muted));
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.85em;
+  font-family: "Courier New", ui-monospace, monospace;
+  overflow-wrap: break-word;
+  word-break: break-all;
+}
+
+.post-content pre {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  font-size: 0.8rem;
+}
+
+@media (min-width: 640px) {
+  .post-content pre {
+    padding: 1.5rem;
+    margin: 2rem 0;
+    font-size: 0.875rem;
+  }
+}
+
+.post-content pre code {
+  background: transparent;
+  padding: 0;
+  word-break: normal;
+}
+
+.post-content img {
+  width: 100%;
+  border-radius: 0.5rem;
+  margin: 1.5rem 0;
+}
+
+@media (min-width: 640px) {
+  .post-content img {
+    margin: 2rem 0;
+  }
+}
+
+.post-content ul,
+.post-content ol {
+  margin: 1.25rem 0;
+  padding-left: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .post-content ul,
+  .post-content ol {
+    margin: 1.5rem 0;
+    padding-left: 2rem;
+  }
+}
+
+.post-content li {
+  margin-bottom: 0.5rem;
+}
+
+/* Tables, figures and equations: the three things a post could contain that
+   the rules above never covered. A table in particular rendered with no
+   borders at all, which is why authors reported that tables "did not work"
+   even when the markup survived. Colours come from the theme tokens so a
+   tenant's own palette still applies. */
+.post-content table {
+  width: 100%;
+  margin: 1.5rem 0;
+  border-collapse: collapse;
+  font-size: 0.95em;
+  /* A wide table must scroll inside the post rather than widen the page. */
+  display: block;
+  overflow-x: auto;
+}
+
+@media (min-width: 640px) {
+  .post-content table {
+    display: table;
+  }
+}
+
+.post-content th,
+.post-content td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.post-content thead th {
+  background: hsl(var(--muted));
+  font-weight: 600;
+}
+
+.post-content tbody tr:nth-child(even) {
+  background: hsl(var(--muted) / 0.4);
+}
+
+.post-content figure {
+  margin: 1.5rem 0;
+}
+
+.post-content figure img {
+  margin: 0;
+}
+
+.post-content figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.85em;
+  text-align: center;
+  color: hsl(var(--muted-foreground));
+}
+
+/* An equation before KaTeX has run, and its fallback if JavaScript never
+   does. Rendered maths replaces the contents of this span. */
+.post-content .math-tex {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.95em;
+}
+
+.post-content .math-tex[data-display="block"] {
+  display: block;
+  margin: 1.5rem 0;
+  text-align: center;
+  overflow-x: auto;
+}
+
+/* KaTeX sets its own line-height, which fights the serif body copy. */
+.post-content .katex {
+  font-size: 1.05em;
+  line-height: normal;
+}

@@ -1,0 +1,63 @@
+name: docker
+
+on:
+  pull_request:
+    paths: ["apps/**", "packages/**", "db/**", "infra/docker/**", "pnpm-lock.yaml", ".github/workflows/docker.yml", ".github/workflows-full/docker.yml"]
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    name: ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The three APIs (console-api also runs the migrate task) and the three Next.js
+        # servers, plus the provider stubs. The web images are built with the local
+        # NEXT_PUBLIC_* defaults; deployments rebuild them for their hosts
+        # (scripts/aws-deploy.sh).
+        include:
+          - { image: console-api, file: api.Dockerfile, app: console-api }
+          - { image: admin-api, file: api.Dockerfile, app: admin-api }
+          - { image: learner-api, file: api.Dockerfile, app: learner-api }
+          - { image: console, file: next.Dockerfile, app: console }
+          - { image: admin, file: next.Dockerfile, app: admin }
+          - { image: web, file: next.Dockerfile, app: web }
+          - { image: stubs, file: stubs.Dockerfile, app: stubs }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/open-mtlms-${{ matrix.image }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/${{ matrix.file }}
+          build-args: |
+            APP=${{ matrix.app }}
+          platforms: linux/amd64,linux/arm64
+          push: ${{ startsWith(github.ref, 'refs/tags/') }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+          provenance: true
+          sbom: true

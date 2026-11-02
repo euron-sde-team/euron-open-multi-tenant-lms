@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360" role="img" aria-labelledby="t d">
+  <title id="t">Euron Open Multi-Tenant LMS</title>
+  <desc id="d">Euron Open Multi-Tenant LMS: a self-hosted, three-tier learning platform. An operator console that sells plans and entitlements, a tenant admin for courses, books, bundles, batches, test series and page templates, and a themed storefront for every tenant.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B1220"/>
+      <stop offset="1" stop-color="#08170F"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#10B981" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#10B981" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="r"><rect width="1280" height="360" rx="24"/></clipPath>
+  </defs>
+  <g clip-path="url(#r)">
+    <rect width="1280" height="360" fill="url(#bg)"/>
+    <circle cx="970" cy="180" r="200" fill="url(#glow)"/>
+
+    <g transform="translate(72 70)">
+      <rect width="56" height="56" rx="16" fill="#F5F7FA"/>
+      <rect x="12" y="34" width="32" height="7" rx="3.5" fill="#0B1220"/>
+      <rect x="15" y="24" width="26" height="7" rx="3.5" fill="#0B1220"/>
+      <rect x="18" y="14" width="20" height="7" rx="3.5" fill="#10B981"/>
+    </g>
+    <text x="144" y="110" font-family="Bricolage Grotesque, Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="26" font-weight="600" fill="#F5F7FA">Euron Open Multi-Tenant LMS</text>
+
+    <text x="72" y="190" font-family="Bricolage Grotesque, Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="46" font-weight="700" fill="#FFFFFF" letter-spacing="-1">One platform, every academy.</text>
+    <text x="72" y="232" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="19" fill="#C7CDD8">Sell plans to academies, let each one build courses, books and tests,</text>
+    <text x="72" y="258" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="19" fill="#C7CDD8">and give every learner a storefront in that academy's brand.</text>
+    <text x="72" y="310" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#6EE7B7" letter-spacing="1.6">OPERATOR  ·  TENANT ADMIN  ·  STOREFRONT  ·  ENTITLEMENTS  ·  JSON TEMPLATES</text>
+
+    <g font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" transform="translate(830 62)">
+      <g font-size="12" font-weight="600" fill="#9AA3B2" letter-spacing="1">
+        <text x="0" y="0">CONSOLE</text>
+        <text x="132" y="0">ADMIN</text>
+        <text x="264" y="0">STOREFRONT</text>
+      </g>
+      <path d="M0 14 H110 M132 14 H242 M264 14 H374" fill="none" stroke="#243042" stroke-width="1.5"/>
+
+      <g>
+        <text x="0" y="46" font-size="12" fill="#E5E8EE">Starter</text>
+        <rect x="0" y="54" width="110" height="4" rx="2" fill="#243042"/><rect x="0" y="54" width="30" height="4" rx="2" fill="#10B981"/>
+        <text x="0" y="86" font-size="12" fill="#E5E8EE">Growth</text>
+        <rect x="0" y="94" width="110" height="4" rx="2" fill="#243042"/><rect x="0" y="94" width="66" height="4" rx="2" fill="#10B981"/>
+        <text x="0" y="126" font-size="12" fill="#FFFFFF" font-weight="600">Scale</text>
+        <rect x="0" y="134" width="110" height="4" rx="2" fill="#10B981"/>
+      </g>
+
+      <g>
+        <rect x="132" y="32" width="110" height="64" rx="8" fill="#121B2A" stroke="#243042"/>
+        <rect x="144" y="46" width="64" height="8" rx="4" fill="#E5E8EE"/>
+        <rect x="144" y="62" width="86" height="4" rx="2" fill="#243042"/>
+        <rect x="144" y="72" width="70" height="4" rx="2" fill="#243042"/>
+        <rect x="144" y="82" width="40" height="4" rx="2" fill="#10B981"/>
+        <rect x="132" y="108" width="110" height="34" rx="8" fill="#121B2A" stroke="#10B981" stroke-width="1.5"/>
+        <rect x="144" y="122" width="54" height="7" rx="3.5" fill="#FFFFFF"/>
+      </g>
+
+      <g>
+        <rect x="264" y="32" width="110" height="110" rx="8" fill="#F5F7FA"/>
+        <rect x="264" y="32" width="110" height="26" rx="8" fill="#0F5132"/>
+        <rect x="276" y="42" width="40" height="6" rx="3" fill="#D1FAE5"/>
+        <rect x="276" y="70" width="40" height="28" rx="4" fill="#A7F3D0"/>
+        <rect x="322" y="70" width="40" height="28" rx="4" fill="#D1D5DB"/>
+        <rect x="276" y="106" width="86" height="5" rx="2.5" fill="#9CA3AF"/>
+        <rect x="276" y="118" width="50" height="12" rx="3" fill="#047857"/>
+      </g>
+
+      <g font-size="13" fill="#E5E8EE">
+        <circle cx="6" cy="184" r="5" fill="#10B981"/><text x="18" y="189">northwind.lvh.me: 4 courses, 1 test series</text>
+        <circle cx="6" cy="208" r="5" fill="#C7CDD8"/><text x="18" y="213">acme.lvh.me: Starter plan, test series locked</text>
+      </g>
+    </g>
+  </g>
+</svg>

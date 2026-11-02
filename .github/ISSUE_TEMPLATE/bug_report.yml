@@ -1,0 +1,49 @@
+name: Bug report
+description: Something does not work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. **Security issues: do not file here**, follow SECURITY.md instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead. Say which tier (operator console, tenant admin, learner storefront), which role you were (operator, tenant owner or staff role, learner), and for provider problems which provider (Stripe, Razorpay, EVS video, SES, an AI provider) and whether it was live or the local stubs.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. make up && make demo
+        2. Open http://northwind.lvh.me:3620 (or the admin at http://localhost:3610) and sign in as a demo account
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: env
+    attributes:
+      label: Environment
+      options: ["Local (make up on Floci)", "Local against AWS (make up-aws)", "AWS (Terraform)", "Self-hosted (other)", "Other"]
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: ["Courses and curriculum", "Books, bundles and batches", "Test series, quizzes and assignments", "Certificates", "Pages, templates and theming", "Learners, enrollments and imports", "Checkout and payments (Stripe, Razorpay)", "Pricing and currencies", "Video playback (EVS, HLS, MP4, YouTube)", "AI authoring", "Email and notifications", "Operator console, plans, entitlements and billing", "Account and sign-in", "Deployment and infrastructure", "Other"]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Redact keys, tokens and hostnames before pasting.
+      render: text

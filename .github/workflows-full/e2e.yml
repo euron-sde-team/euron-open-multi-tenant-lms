@@ -1,0 +1,61 @@
+name: e2e
+
+# The full stack on the Floci AWS emulator: Terraform provisions KMS, Secrets Manager,
+# S3, Route53, SES and the SES events queue; Stripe, Razorpay, the video system and the
+# AI endpoint are the local stubs and AI authoring runs offline, so no account or key is
+# needed anywhere. `make demo` seeds plans, an operator and the demo tenants; smoke
+# calls check every tier, then Playwright drives the apps (when e2e/tests exists).
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-floci:
+    name: end-to-end on Floci
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: docker/setup-buildx-action@v3
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+        if: hashFiles('e2e/tests/**') != ''
+      - name: Stack up
+        run: make up
+      - name: Demo data
+        run: make demo
+      - name: Smoke (health of the three APIs, the three apps and a storefront)
+        run: |
+          for port in 5076 5086 5096; do curl -fsS "http://localhost:$port/api/v1/health" >/dev/null; done
+          curl -fsS -o /dev/null http://localhost:3600/
+          curl -fsS -o /dev/null http://localhost:3610/
+          curl -fsS -o /dev/null http://northwind.lvh.me:3620/
+          curl -fsS http://localhost:5189/health
+      - name: Browser tests
+        if: hashFiles('e2e/tests/**') != ''
+        run: pnpm e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            e2e/.report
+            e2e/.results
+      - name: Stack logs on failure
+        if: failure()
+        run: docker compose -p open-mtlms logs --tail 200 console-api admin-api learner-api console admin web stubs migrate floci terraform

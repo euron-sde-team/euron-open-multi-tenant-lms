@@ -1,0 +1,32 @@
+flowchart LR
+  ops["Operator staff<br/>(browser)"]
+  staff["Tenant staff<br/>(browser)"]
+  learner["Learners<br/>(browser, tenant host)"]
+  console["Tier 1: console<br/>apps/console (Next.js)"]
+  admin["Tier 2: admin<br/>apps/admin (Next.js)"]
+  web["Tier 3: web<br/>apps/web (Next.js, SSR theming)"]
+  capi["console-api<br/>/api/v1/admin"]
+  aapi["admin-api<br/>/api/v1/tenant"]
+  lapi["learner-api<br/>/api/v1, tenant from host"]
+  pg[("PostgreSQL<br/>one schema")]
+  redis[("Redis<br/>BullMQ, caches")]
+  s3[("S3")]
+  ses["SES"]
+  gw["Tenant gateways<br/>Stripe, Razorpay"]
+  pgw["Platform billing<br/>Stripe, Razorpay"]
+  evs["euron-video-system<br/>(EVS)"]
+  ai["OpenAI-compatible API<br/>(optional)"]
+
+  ops --> console --> capi
+  staff --> admin --> aapi
+  learner --> web --> lapi
+  capi & aapi & lapi --> pg
+  aapi & lapi --> redis
+  aapi & lapi --> s3
+  capi & aapi & lapi --> ses
+  lapi -- "orders" --> gw
+  gw -- "signed webhooks" --> lapi
+  aapi -- "tenant plan subscriptions" --> pgw
+  pgw -- "signed webhooks" --> aapi
+  lapi -- "playback sessions" --> evs
+  aapi -- "AI authoring" --> ai

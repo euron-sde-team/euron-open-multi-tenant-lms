@@ -1,0 +1,50 @@
+node_modules/
+dist/
+dist-scripts/
+coverage/
+.turbo/
+*.log
+.DS_Store
+
+# Environment: only the *.example files are ever committed
+.env
+.env.*
+!.env.example
+!**/.env.example
+!**/.env.*.example
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+crash.log
+
+# Local runtime artifacts
+.local-storage/
+tmp/
+playwright-report/
+test-results/
+e2e/.report/
+e2e/.results/
+e2e/.auth/
+blob-report/
+
+# Local tool state (browser automation, editors)
+.gstack/
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Next.js build output
+.next/
+out/
+
+# Generated Kysely types (copied into each API's src/db by pnpm db:types)
+packages/db/generated/
+
+# TypeScript incremental state
+*.tsbuildinfo

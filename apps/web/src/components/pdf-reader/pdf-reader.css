@@ -1,0 +1,233 @@
+/* Scoped styles for the PDF reader. Tailwind globals get tripped up by the
+   react-pdf text layer, so we lock down a few defaults under .pdf-reader-root. */
+
+.pdf-reader-root {
+  width: 100%;
+  /* 100vh on iOS Safari counts the area under the address bar, so the bottom
+     of the reader sits behind the chrome. dvh tracks the *visible* viewport
+     and shrinks/grows as the bar collapses. vh stays as a fallback for
+     older browsers (Safari < 15.4). */
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The Document wrapper is what react-pdf renders around all pages. Making it
+   a centered flex column means each page (and the per-page ref wrapper we
+   render around it) sits in the horizontal middle of the scroll container
+   regardless of viewport width. Without this the pages hug the left edge on
+   wide viewports because the wrapper divs are block-level and the inner
+   .react-pdf__Page has a fixed pixel width. */
+.pdf-reader-root .react-pdf__Document {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.pdf-reader-root .react-pdf__Page {
+  display: block;
+  margin: 16px auto;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  background: white;
+  max-width: 100%;
+}
+
+/* Match the per-page wrapper div we render in PdfReader.tsx so it hugs the
+   page width instead of stretching to the container, which would defeat the
+   align-items: center above. */
+.pdf-reader-root .react-pdf__Document > div {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.pdf-reader-root .react-pdf__Page__textContent {
+  user-select: text;
+}
+
+.pdf-reader-root .react-pdf__Page__annotations.annotationLayer {
+  /* Hide native PDF annotations to avoid clashing with our overlay. */
+  display: none;
+}
+
+/* Theme variants. Applied as a class on the scroll container. */
+.pdf-theme-light {
+  background: #f5f5f4;
+}
+
+.pdf-theme-sepia {
+  background: #f4ecd8;
+}
+
+.pdf-theme-sepia .react-pdf__Page {
+  filter: sepia(0.25) brightness(0.97);
+}
+
+.pdf-theme-dark {
+  background: #1c1917;
+}
+
+/* Inverting the page canvas is the standard react-pdf dark-mode trick. */
+.pdf-theme-dark .react-pdf__Page canvas {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Hide the text layer in dark mode so selection rectangles don't show inverted. */
+.pdf-theme-dark .react-pdf__Page__textContent {
+  opacity: 0.0001;
+  pointer-events: auto;
+}
+
+/* Toolbar chrome inherits the *tenant* theme via CSS variables defined on the
+   document (`--background`, `--foreground`, `--border`, `--muted`, etc.). The
+   reader's own light/sepia/dark theme (`pdf-theme-*`) is intentionally NOT
+   applied to the toolbar, because the toolbar is product chrome that should
+   match the rest of the tenant's site, while the reader theme is for reading
+   comfort on the actual PDF surface below. */
+.pdf-reader-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: hsl(var(--background) / 0.92);
+  color: hsl(var(--foreground));
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.pdf-reader-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  min-height: 36px;
+  min-width: 36px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: hsl(var(--foreground));
+  background: transparent;
+  border: 1px solid transparent;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.pdf-reader-toolbar button:hover {
+  /* Hover always uses --muted so it stays readable in every tenant theme.
+     Avoid --accent here per repo convention (tenant-controlled, can be a vivid
+     color that produces unreadable contrast against --foreground). */
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.pdf-reader-toolbar button:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.pdf-reader-page-input {
+  width: 56px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  text-align: center;
+  font-size: 14px;
+}
+
+.pdf-reader-page-input:focus {
+  outline: none;
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+}
+
+/* The "x / N" page-total label sits next to the input and was previously
+   `opacity: 0.7` which renders unreadably faint on some tenant dark themes.
+   Use --muted-foreground so it's tied to the design token instead. */
+.pdf-reader-toolbar .pdf-reader-page-total {
+  font-size: 14px;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Selection popup */
+.pdf-selection-popup {
+  position: absolute;
+  z-index: 40;
+  padding: 6px 8px;
+  background: #18181b;
+  color: #f5f5f4;
+  border-radius: 6px;
+  font-size: 13px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  display: flex;
+  gap: 6px;
+}
+
+.pdf-selection-popup button {
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  font-size: 13px;
+  border: none;
+}
+
+.pdf-selection-popup button:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* Sample mode CTA banner */
+.pdf-reader-sample-cta {
+  margin: 24px auto;
+  padding: 16px 20px;
+  max-width: 480px;
+  text-align: center;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: inherit;
+}
+
+/* Tighter scrollbar on the PDF surface */
+.pdf-reader-scroll {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+  padding-bottom: 80px;
+}
+
+/* Mobile tweaks */
+@media (max-width: 768px) {
+  .pdf-reader-toolbar {
+    padding: 6px 8px;
+    gap: 4px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    /* Allow the toolbar to scroll horizontally on narrow screens instead of
+       wrapping onto a second row, which fights the sticky position and eats
+       valuable vertical space on phones. */
+    -webkit-overflow-scrolling: touch;
+  }
+  .pdf-reader-toolbar button {
+    padding: 6px 8px;
+    min-height: 40px;
+    min-width: 40px;
+    flex-shrink: 0;
+  }
+  .pdf-reader-page-input {
+    flex-shrink: 0;
+  }
+  /* Hide the book title on phones; the toolbar controls are the priority. */
+  .pdf-reader-title {
+    display: none;
+  }
+}
+
+/* Make the popup tappable on touch devices and keep it inside the viewport. */
+.pdf-selection-popup {
+  max-width: calc(100vw - 24px);
+}

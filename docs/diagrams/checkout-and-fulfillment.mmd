@@ -1,0 +1,27 @@
+sequenceDiagram
+  autonumber
+  participant B as Browser (web)
+  participant L as learner-api
+  participant G as Gateway (tenant's Stripe or Razorpay)
+  participant P as Postgres
+  participant Q as BullMQ webhook-fulfillment
+  B->>L: POST /checkout/create-order (Idempotency-Key)
+  L->>P: price from content_prices or legacy columns, coupon, tax
+  L->>G: create order or Checkout Session (tenant credentials, unsealed)
+  L->>P: payment_orders PAYMENT_PENDING
+  L-->>B: client_config
+  B->>G: pay
+  par Path A: webhook
+    G->>L: POST /api/v1/webhooks/{stripe,razorpay} (signed, raw body)
+    L->>L: verify signature with the tenant's secret
+    L->>P: insert payment_webhook_events (unique tenant, provider, event_id)
+    L->>L: captured amount and currency equal the order total
+    L->>P: order PAID
+    L->>Q: fulfill (3 attempts, exponential backoff)
+    Q->>P: skip if metadata.fulfilled, else grant access, redeem coupon, mark fulfilled
+  and Path B: verify fallback
+    B->>L: POST /checkout/verify-payment
+    L->>G: stored gateway order id. Stripe: retrieve session, check amount. Razorpay: check signature
+    L->>P: order PAID, grant access inline if not fulfilled
+  end
+  B->>L: GET course, play lecture

@@ -1,0 +1,59 @@
+{
+  "name": "euron-open-multi-tenant-lms",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-hosted, three-tier multi-tenant LMS: an operator console that sells plans and entitlements, a tenant admin for courses, books, bundles, batches, test series, quizzes, assignments, certificates and JSON page templates, and a themed learner storefront with checkout. Express + Kysely + Postgres, Next.js, Terraform for AWS.",
+  "license": "MIT",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:integration": "vitest run --config vitest.integration.config.mts",
+    "e2e": "playwright test --config e2e/playwright.config.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:migrate": "tsx db/migrate.ts",
+    "db:types": "pnpm --filter @open-mtlms/db gen:types",
+    "db:types:check": "pnpm --filter @open-mtlms/db check:types",
+    "demo:seed": "pnpm --filter @open-mtlms/console-api demo:seed",
+    "sanitize": "scripts/check-sanitization.sh"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4",
+    "@eslint/js": "^9.39.1",
+    "@next/eslint-plugin-next": "14.2.35",
+    "@playwright/test": "^1.49.1",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.15.6",
+    "dotenv": "^17.2.3",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "pg": "^8.16.3",
+    "prettier": "^3.4.2",
+    "tsx": "^4.21.0",
+    "turbo": "^2.3.3",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.47.0",
+    "vite": "^7.1.12",
+    "vitest": "^4.1.12"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "bcrypt",
+      "prisma",
+      "@prisma/engines",
+      "@prisma/client"
+    ],
+    "overrides": {
+      "postcss@<8.5.23": "^8.5.29",
+      "vite": "^7.1.12"
+    }
+  }
+}

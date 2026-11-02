@@ -1,0 +1,4517 @@
+generator kysely {
+  provider     = "prisma-kysely"
+  output       = "../generated"
+  enumFileName = "enums.ts"
+  fileName     = "types.ts"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model addon_subscriptions {
+  id                       String                    @id
+  tenant_id                String
+  addon_id                 String
+  billing_cycle            billing_cycle             @default(MONTHLY)
+  currency                 String
+  original_price           Decimal                   @db.Decimal(10, 2)
+  discount_applied         Decimal                   @default(0) @db.Decimal(10, 2)
+  price_snapshot           Decimal                   @db.Decimal(10, 2)
+  billing_provider_id      String?
+  external_subscription_id String?
+  started_at               DateTime                  @default(now())
+  current_period_start     DateTime                  @default(now())
+  current_period_end       DateTime
+  cancelled_at             DateTime?
+  status                   addon_subscription_status @default(PENDING)
+  created_at               DateTime
+  updated_at               DateTime
+  billing_providers        billing_providers?        @relation(fields: [billing_provider_id], references: [id])
+  tenant_addons            tenant_addons?
+
+  @@index([addon_id])
+  @@index([external_subscription_id])
+  @@index([status])
+  @@index([tenant_id])
+}
+
+model addons {
+  id                         String          @id
+  application_id             String
+  code                       String          @unique
+  name                       String
+  description                String?
+  product_id                 String
+  grant_value                Int
+  is_unlimited               Boolean         @default(false)
+  price_monthly_inr          Decimal         @db.Decimal(10, 2)
+  price_yearly_inr           Decimal         @db.Decimal(10, 2)
+  discount_monthly_inr_type  discount_type   @default(NONE)
+  discount_monthly_inr_value Decimal         @default(0) @db.Decimal(10, 2)
+  discount_yearly_inr_type   discount_type   @default(NONE)
+  discount_yearly_inr_value  Decimal         @default(0) @db.Decimal(10, 2)
+  price_monthly_usd          Decimal         @db.Decimal(10, 2)
+  price_yearly_usd           Decimal         @db.Decimal(10, 2)
+  discount_monthly_usd_type  discount_type   @default(NONE)
+  discount_monthly_usd_value Decimal         @default(0) @db.Decimal(10, 2)
+  discount_yearly_usd_type   discount_type   @default(NONE)
+  discount_yearly_usd_value  Decimal         @default(0) @db.Decimal(10, 2)
+  is_active                  Boolean         @default(true)
+  is_public                  Boolean         @default(true)
+  sort_order                 Int             @default(0)
+  created_at                 DateTime
+  updated_at                 DateTime
+  applications               applications    @relation(fields: [application_id], references: [id])
+  products                   products        @relation(fields: [product_id], references: [id])
+  tenant_addons              tenant_addons[]
+
+  @@index([application_id])
+  @@index([product_id])
+}
+
+model admin_audit_logs {
+  id             String   @id
+  actor_admin_id String?
+  actor_email    String?
+  actor_name     String?
+  action         String
+  category       String
+  resource_id    String?
+  resource_label String?
+  tenant_id      String?
+  summary        String
+  metadata       Json?
+  ip_address     String?
+  user_agent     String?
+  is_system      Boolean  @default(false)
+  created_at     DateTime @default(now())
+  device         String?
+  browser        String?
+  os             String?
+  country        String?
+  region         String?
+  city           String?
+
+  @@index([action])
+  @@index([actor_admin_id])
+  @@index([actor_admin_id, created_at], map: "admin_audit_logs_actor_idx")
+  @@index([category])
+  @@index([created_at])
+  @@index([created_at], map: "admin_audit_logs_created_idx")
+  @@index([tenant_id])
+}
+
+model admin_permissions {
+  id                     String                   @id
+  code                   String                   @unique
+  name                   String
+  description            String?
+  category               String?
+  created_at             DateTime
+  admin_role_permissions admin_role_permissions[]
+
+  @@index([category])
+  @@index([code])
+}
+
+model admin_role_permissions {
+  role_id           String
+  permission_id     String
+  created_at        DateTime          @default(now())
+  admin_permissions admin_permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+  admin_roles       admin_roles       @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@id([role_id, permission_id])
+  @@index([permission_id])
+  @@index([role_id])
+}
+
+model admin_roles {
+  id                     String                   @id
+  code                   String                   @unique
+  name                   String
+  description            String?
+  is_system              Boolean                  @default(false)
+  created_at             DateTime
+  updated_at             DateTime
+  admin_role_permissions admin_role_permissions[]
+  admin_user_roles       admin_user_roles[]
+
+  @@index([code])
+}
+
+model admin_user_roles {
+  admin_user_id String
+  role_id       String
+  assigned_at   DateTime    @default(now())
+  assigned_by   String?
+  admin_users   admin_users @relation(fields: [admin_user_id], references: [id], onDelete: Cascade)
+  admin_roles   admin_roles @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@id([admin_user_id, role_id])
+  @@index([admin_user_id])
+  @@index([role_id])
+}
+
+model admin_users {
+  id                        String                      @id
+  email                     String                      @unique
+  password_hash             String?
+  name                      String
+  avatar_url                String?
+  oauth_provider            String?
+  oauth_provider_id         String?
+  status                    admin_user_status           @default(ACTIVE)
+  email_verified            Boolean                     @default(false)
+  last_login_at             DateTime?
+  created_at                DateTime
+  updated_at                DateTime
+  admin_user_roles          admin_user_roles[]
+  tenant_addon_events       tenant_addon_events[]
+  tenant_application_events tenant_application_events[]
+  tenant_applications       tenant_applications[]
+
+  @@unique([oauth_provider, oauth_provider_id])
+  @@index([email])
+  @@index([status])
+}
+
+model applications {
+  id                  String                @id
+  code                String                @unique
+  name                String
+  description         String?
+  icon_url            String?
+  is_active           Boolean               @default(true)
+  is_public           Boolean               @default(true)
+  sort_order          Int                   @default(0)
+  created_at          DateTime
+  updated_at          DateTime
+  config              Json?
+  addons              addons[]
+  features            features[]
+  plan_applications   plan_applications[]
+  tenant_applications tenant_applications[]
+}
+
+model assignment_evaluations {
+  id                     String                 @id
+  tenant_id              String
+  submission_id          String                 @unique
+  assignment_id          String
+  tenant_member_id       String
+  score                  Int
+  max_score              Int                    @default(100)
+  feedback               String?
+  evaluated_by           String
+  evaluated_at           DateTime
+  created_at             DateTime
+  updated_at             DateTime
+  assignment_submissions assignment_submissions @relation(fields: [submission_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, assignment_id])
+  @@index([tenant_id, submission_id])
+  @@index([tenant_id, tenant_member_id])
+}
+
+model assignment_submissions {
+  id                     String                  @id
+  tenant_id              String
+  assignment_id          String
+  tenant_member_id       String
+  course_id              String
+  content_type           submission_content_type @default(TEXT)
+  text_content           String?
+  pdf_key                String?
+  status                 submission_status       @default(SUBMITTED)
+  submitted_at           DateTime?
+  created_at             DateTime
+  updated_at             DateTime
+  assignment_evaluations assignment_evaluations?
+  assignments            assignments             @relation(fields: [assignment_id], references: [id], onDelete: Cascade)
+  courses                courses                 @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  tenant_members         tenant_members          @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, assignment_id, tenant_member_id])
+  @@index([tenant_id, assignment_id])
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, status])
+  @@index([tenant_id, tenant_member_id])
+}
+
+model assignments {
+  id                         String                       @id
+  tenant_id                  String
+  course_id                  String
+  lesson_id                  String?
+  title                      String
+  instructions               String?
+  resource_links             String[]                     @default([])
+  created_at                 DateTime
+  updated_at                 DateTime
+  ai_generated               Boolean                      @default(false)
+  content_type               assignment_content_type      @default(TEXT)
+  due_date                   DateTime?
+  max_score                  Int                          @default(100)
+  pdf_key                    String?
+  scope                      assignment_scope             @default(LESSON)
+  section_id                 String?
+  sort_order                 Int                          @default(0)
+  source_lecture_id          String?
+  status                     assignment_status            @default(DRAFT)
+  passing_score              Int?
+  assignment_submissions     assignment_submissions[]
+  courses                    courses                      @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  course_lessons             course_lessons?              @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  course_sections            course_sections?             @relation(fields: [section_id], references: [id], onDelete: Cascade)
+  member_assignment_progress member_assignment_progress[]
+
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, course_id, status])
+  @@index([tenant_id, lesson_id])
+  @@index([tenant_id, section_id])
+  @@index([tenant_id, status])
+}
+
+model batch_enrollments {
+  id               String            @id
+  tenant_id        String
+  batch_id         String
+  tenant_member_id String
+  joined_at        DateTime          @default(now())
+  valid_till       DateTime?
+  status           enrollment_status @default(ACTIVE)
+  source           enrollment_source @default(PURCHASED)
+  source_order_id  String?
+  source_coupon_id String?
+  created_at       DateTime          @default(now())
+  updated_at       DateTime          @default(now())
+  batches          batches           @relation(fields: [batch_id], references: [id], onDelete: Cascade)
+  tenants          tenants           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_members   tenant_members    @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, batch_id, tenant_member_id])
+  @@index([batch_id, status])
+  @@index([tenant_id, status])
+  @@index([tenant_id, tenant_member_id])
+}
+
+model batch_items {
+  id         String          @id
+  tenant_id  String
+  batch_id   String
+  item_type  batch_item_type
+  course_id  String?
+  book_id    String?
+  sort_order Int             @default(0)
+  created_at DateTime        @default(now())
+  batches    batches         @relation(fields: [batch_id], references: [id], onDelete: Cascade)
+  books      books?          @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  courses    courses?        @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, batch_id, book_id])
+  @@unique([tenant_id, batch_id, course_id])
+  @@index([tenant_id, batch_id])
+  @@index([tenant_id, book_id])
+  @@index([tenant_id, course_id])
+}
+
+model batch_leaderboard_snapshots {
+  id           String   @id
+  tenant_id    String
+  batch_id     String
+  computed_at  DateTime @default(now())
+  participants Int      @default(0)
+  payload      Json
+  created_at   DateTime @default(now())
+  batches      batches  @relation(fields: [batch_id], references: [id], onDelete: Cascade)
+  tenants      tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, batch_id, computed_at])
+}
+
+model batches {
+  id                          String                        @id
+  tenant_id                   String
+  title                       String
+  slug                        String
+  subtitle                    String?
+  description                 String?
+  thumbnail_url               String?
+  cover_image_url             String?
+  preview_url                 String?
+  start_date                  DateTime
+  end_date                    DateTime?
+  enrollment_open_date        DateTime?
+  enrollment_close_date       DateTime?
+  duration_days               Int?
+  validity_days               Int?
+  price_inr                   Decimal?                      @db.Decimal(10, 2)
+  price_usd                   Decimal?                      @db.Decimal(10, 2)
+  discount_inr                Decimal?                      @db.Decimal(10, 2)
+  discount_usd                Decimal?                      @db.Decimal(10, 2)
+  purchase_mode               purchase_mode                 @default(PAID)
+  status                      batch_status                  @default(DRAFT)
+  sort_order                  Int                           @default(0)
+  total_enrollments           Int                           @default(0)
+  created_at                  DateTime                      @default(now())
+  updated_at                  DateTime                      @default(now())
+  learning_outcomes           String[]                      @default([])
+  mobile_thumbnail_key        String?
+  web_thumbnail_key           String?
+  batch_enrollments           batch_enrollments[]
+  batch_items                 batch_items[]
+  batch_leaderboard_snapshots batch_leaderboard_snapshots[]
+  tenants                     tenants                       @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  cart_items                  cart_items[]
+  cart_order_items            cart_order_items[]
+  content_product_links       content_product_links[]
+  coupon_applicable_items     coupon_applicable_items[]
+
+  @@unique([tenant_id, slug])
+  @@index([tenant_id, purchase_mode])
+  @@index([tenant_id, status, created_at])
+  @@index([tenant_id, status])
+  @@index([tenant_id, status, sort_order, created_at])
+  @@index([tenant_id, status, start_date])
+}
+
+model billing_providers {
+  id                            String                          @id
+  name                          String                          @unique
+  created_at                    DateTime
+  updated_at                    DateTime
+  is_active                     Boolean                         @default(true)
+  is_visible_to_tenant          Boolean                         @default(true)
+  credential_schema             Json?
+  addon_subscriptions           addon_subscriptions[]
+  billing_webhooks              billing_webhooks[]
+  plan_version_billing_mappings plan_version_billing_mappings[]
+  subscriptions                 subscriptions[]
+  tenant_gateway_connections    tenant_gateway_connections[]
+
+  @@index([name])
+}
+
+model billing_webhooks {
+  id                  String            @id
+  billing_provider_id String
+  event_type          String
+  event_id            String            @unique
+  payload             Json
+  status              webhook_status    @default(PENDING)
+  processed_at        DateTime?
+  error_message       String?
+  created_at          DateTime
+  billing_providers   billing_providers @relation(fields: [billing_provider_id], references: [id])
+
+  @@index([billing_provider_id, event_type])
+  @@index([status])
+}
+
+model book_access {
+  id               String            @id
+  tenant_id        String
+  tenant_member_id String
+  book_id          String
+  status           enrollment_status @default(ACTIVE)
+  source           enrollment_source @default(FREE)
+  source_bundle_id String?
+  source_coupon_id String?
+  valid_till       DateTime?
+  created_at       DateTime
+  updated_at       DateTime
+  source_batch_id  String?
+  books            books             @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  tenants          tenants           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_members   tenant_members    @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, tenant_member_id, book_id])
+  @@index([tenant_id, book_id])
+  @@index([tenant_id, status])
+  @@index([tenant_id, tenant_member_id])
+}
+
+model book_authors {
+  id            String      @id
+  tenant_id     String
+  book_id       String
+  instructor_id String
+  sort_order    Int         @default(0)
+  created_at    DateTime    @default(now())
+  books         books       @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  instructors   instructors @relation(fields: [instructor_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, book_id, instructor_id])
+  @@index([tenant_id, book_id])
+}
+
+model book_categories {
+  id          String     @id
+  tenant_id   String
+  book_id     String
+  category_id String
+  created_at  DateTime   @default(now())
+  books       books      @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  categories  categories @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, book_id, category_id])
+  @@index([tenant_id, book_id])
+  @@index([tenant_id, category_id])
+}
+
+model book_conversions {
+  id                String                 @id
+  tenant_id         String
+  book_id           String
+  source_type       book_source_type
+  source_url        String
+  source_key        String
+  source_filename   String
+  source_size_bytes BigInt
+  status            book_conversion_status @default(PENDING)
+  job_id            String?
+  output_url        String?
+  output_key        String?
+  output_size_bytes BigInt?
+  pipeline          String?
+  error_message     String?
+  error_code        String?
+  attempt           Int                    @default(0)
+  duration_ms       Int?
+  started_at        DateTime?
+  completed_at      DateTime?
+  created_at        DateTime               @default(now())
+  updated_at        DateTime
+  books             books                  @relation(fields: [book_id], references: [id], onDelete: Cascade)
+
+  @@index([status, created_at])
+  @@index([tenant_id, book_id, created_at(sort: Desc)])
+}
+
+model book_recommendations {
+  id                  String   @id
+  tenant_id           String
+  book_id             String
+  recommended_book_id String
+  sort_order          Int      @default(0)
+  created_at          DateTime
+  updated_at          DateTime
+  books               books    @relation(fields: [book_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, book_id, recommended_book_id])
+  @@index([tenant_id, book_id])
+  @@index([tenant_id, book_id, sort_order])
+}
+
+model books {
+  id                         String                       @id
+  tenant_id                  String
+  title                      String
+  slug                       String
+  author                     String?
+  description                String?
+  pages                      Int?
+  url                        String?
+  page_images                String[]                     @default([])
+  price_inr                  Decimal?                     @db.Decimal(10, 2)
+  price_usd                  Decimal?                     @db.Decimal(10, 2)
+  discount_inr               Decimal?                     @db.Decimal(10, 2)
+  discount_usd               Decimal?                     @db.Decimal(10, 2)
+  purchase_mode              purchase_mode                @default(PAID)
+  status                     book_status                  @default(DRAFT)
+  language                   String[]                     @default(["English"])
+  thumbnail_url              String?
+  preview_url                String?
+  summary                    String?
+  sort_order                 Int                          @default(0)
+  created_at                 DateTime
+  updated_at                 DateTime
+  rating                     Decimal?                     @db.Decimal(3, 2)
+  rating_total_count         Int?                         @default(0)
+  validity_days              Int?
+  sample_enabled             Boolean                      @default(false)
+  sample_pages               Int?
+  file_format                book_file_format             @default(EPUB)
+  batch_items                batch_items[]
+  book_access                book_access[]
+  book_authors               book_authors[]
+  book_categories            book_categories[]
+  book_conversions           book_conversions[]
+  book_recommendations       book_recommendations[]
+  tenants                    tenants                      @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  bundle_items               bundle_items[]
+  cart_items                 cart_items[]
+  cart_order_items           cart_order_items[]
+  content_product_links      content_product_links[]
+  coupon_applicable_items    coupon_applicable_items[]
+  member_book_highlights     member_book_highlights[]
+  member_book_page_bookmarks member_book_page_bookmarks[]
+  member_book_progress       member_book_progress[]
+
+  @@unique([tenant_id, slug])
+  @@index([tenant_id, purchase_mode])
+  @@index([tenant_id, status, created_at])
+  @@index([tenant_id, status])
+  @@index([tenant_id, status, sort_order, created_at])
+}
+
+model bulk_certificates {
+  id                  String              @id
+  tenant_id           String
+  batch_id            String
+  recipient_name      String
+  certificate_number  String
+  status              certificate_status  @default(ISSUED)
+  issued_at           DateTime            @default(now())
+  revoked_at          DateTime?
+  created_at          DateTime
+  updated_at          DateTime
+  email               String?
+  emailed_at          DateTime?
+  tenant_member_id    String?
+  certificate_batches certificate_batches @relation(fields: [batch_id], references: [id], onDelete: Cascade)
+  tenants             tenants             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, certificate_number])
+  @@index([tenant_id, batch_id])
+  @@index([tenant_id, issued_at])
+  @@index([tenant_id, tenant_member_id])
+}
+
+model bundle_items {
+  id             String           @id
+  tenant_id      String
+  bundle_id      String
+  item_type      bundle_item_type
+  course_id      String?
+  book_id        String?
+  sort_order     Int              @default(0)
+  created_at     DateTime         @default(now())
+  test_series_id String?
+  books          books?           @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  bundles        bundles          @relation(fields: [bundle_id], references: [id], onDelete: Cascade)
+  courses        courses?         @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  test_series    test_series?     @relation(fields: [test_series_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, book_id])
+  @@index([tenant_id, bundle_id])
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, test_series_id])
+}
+
+model bundles {
+  id                      String                    @id
+  tenant_id               String
+  title                   String
+  slug                    String
+  subtitle                String?
+  description             String?
+  price_inr               Decimal?                  @db.Decimal(10, 2)
+  price_usd               Decimal?                  @db.Decimal(10, 2)
+  discount_inr            Decimal?                  @db.Decimal(10, 2)
+  discount_usd            Decimal?                  @db.Decimal(10, 2)
+  thumbnail_url           String?
+  preview_url             String?
+  status                  bundle_status             @default(DRAFT)
+  validity_days           Int?
+  sort_order              Int                       @default(0)
+  created_at              DateTime
+  updated_at              DateTime
+  purchase_mode           purchase_mode             @default(PAID)
+  bundle_items            bundle_items[]
+  tenants                 tenants                   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  cart_items              cart_items[]
+  cart_order_items        cart_order_items[]
+  content_product_links   content_product_links[]
+  coupon_applicable_items coupon_applicable_items[]
+
+  @@unique([tenant_id, slug])
+  @@index([tenant_id, purchase_mode])
+  @@index([tenant_id, status, created_at])
+  @@index([tenant_id, status])
+  @@index([tenant_id, status, sort_order, created_at])
+}
+
+model cart_items {
+  id               String         @id
+  tenant_id        String
+  tenant_member_id String
+  item_type        cart_item_type
+  course_id        String?
+  book_id          String?
+  bundle_id        String?
+  created_at       DateTime       @default(now())
+  updated_at       DateTime
+  coupon_code      String?        @db.VarChar(50)
+  batch_id         String?
+  batches          batches?       @relation(fields: [batch_id], references: [id], onDelete: Cascade)
+  books            books?         @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  bundles          bundles?       @relation(fields: [bundle_id], references: [id], onDelete: Cascade)
+  courses          courses?       @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  tenants          tenants        @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_members   tenant_members @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, tenant_member_id, item_type, batch_id])
+  @@unique([tenant_id, tenant_member_id, item_type, book_id])
+  @@unique([tenant_id, tenant_member_id, item_type, bundle_id])
+  @@unique([tenant_id, tenant_member_id, item_type, course_id])
+  @@index([tenant_id, created_at])
+  @@index([tenant_id, tenant_member_id])
+}
+
+model cart_order_items {
+  id                   String         @id
+  tenant_id            String
+  order_id             String
+  item_type            cart_item_type
+  course_id            String?
+  book_id              String?
+  bundle_id            String?
+  base_amount          Decimal        @db.Decimal(16, 2)
+  discount_amount      Decimal        @default(0) @db.Decimal(16, 2)
+  net_amount           Decimal        @db.Decimal(16, 2)
+  created_at           DateTime       @default(now())
+  coupon_code_snapshot String?        @db.VarChar(50)
+  coupon_id            String?
+  batch_id             String?
+  batches              batches?       @relation(fields: [batch_id], references: [id])
+  books                books?         @relation(fields: [book_id], references: [id])
+  bundles              bundles?       @relation(fields: [bundle_id], references: [id])
+  courses              courses?       @relation(fields: [course_id], references: [id])
+  payment_orders       payment_orders @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, order_id])
+}
+
+model categories {
+  id                String              @id
+  tenant_id         String
+  name              String
+  slug              String
+  description       String?
+  icon_url          String?
+  parent_id         String?
+  sort_order        Int                 @default(0)
+  is_active         Boolean             @default(true)
+  created_at        DateTime
+  updated_at        DateTime
+  book_categories   book_categories[]
+  categories        categories?         @relation("categoriesTocategories", fields: [parent_id], references: [id])
+  other_categories  categories[]        @relation("categoriesTocategories")
+  tenants           tenants             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  course_categories course_categories[]
+
+  @@unique([tenant_id, slug])
+  @@index([tenant_id, is_active])
+  @@index([tenant_id, parent_id])
+  @@index([tenant_id, sort_order])
+}
+
+model certificate_batches {
+  id                String              @id
+  tenant_id         String
+  title             String
+  template_id       String
+  /// A custom design (certificate_templates.id) when the batch uses one
+  certificate_template_id String?
+  /// The design as it was when the batch was issued
+  template_snapshot Json?
+  signatory_name    String?
+  signatory_title   String?
+  total_count       Int                 @default(0)
+  created_by        String?
+  created_at        DateTime            @default(now())
+  updated_at        DateTime
+  bulk_certificates bulk_certificates[]
+  tenants           tenants             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, created_at])
+}
+
+model certificate_templates {
+  id                   String   @id
+  tenant_id            String
+  name                 String
+  page_size            String   @default("A4")
+  orientation          String   @default("LANDSCAPE")
+  background_asset_url String?
+  layout               Json
+  is_default           Boolean  @default(false)
+  status               String   @default("DRAFT")
+  created_at           DateTime @default(now())
+  updated_at           DateTime @default(now())
+
+  @@index([tenant_id])
+  @@index([tenant_id, is_default])
+}
+
+model certificates {
+  id                      String             @id
+  tenant_id               String
+  tenant_member_id        String
+  course_id               String
+  certificate_number      String
+  status                  certificate_status @default(ISSUED)
+  issued_at               DateTime           @default(now())
+  revoked_at              DateTime?
+  created_at              DateTime
+  updated_at              DateTime
+  emailed_at              DateTime?
+  certificate_template_id String?
+  template_snapshot       Json?
+  courses                 courses            @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  tenants                 tenants            @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_members          tenant_members     @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, certificate_number])
+  @@unique([tenant_id, tenant_member_id, course_id])
+  @@index([tenant_id, issued_at])
+  @@index([tenant_id, status])
+  @@index([tenant_id, tenant_member_id])
+}
+
+model content_prices {
+  id            String                @id
+  tenant_id     String
+  entity_type   price_entity_type
+  entity_id     String
+  currency      String                @db.VarChar(8)
+  amount        Decimal               @db.Decimal(12, 2)
+  discount      Decimal               @default(0) @db.Decimal(12, 2)
+  created_at    DateTime              @default(now())
+  updated_at    DateTime
+  discount_type content_discount_type @default(PERCENTAGE)
+  tenants       tenants               @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, entity_type, entity_id, currency])
+  @@index([tenant_id, entity_type, entity_id])
+}
+
+model content_product_links {
+  id           String                @id
+  tenant_id    String
+  product_id   String
+  product_code String
+  content_type linkable_content_type
+  course_id    String?
+  book_id      String?
+  bundle_id    String?
+  is_active    Boolean               @default(true)
+  created_at   DateTime              @default(now())
+  updated_at   DateTime
+  batch_id     String?
+  batches      batches?              @relation(fields: [batch_id], references: [id], onDelete: Cascade)
+  books        books?                @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  bundles      bundles?              @relation(fields: [bundle_id], references: [id], onDelete: Cascade)
+  courses      courses?              @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  products     products              @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  tenants      tenants               @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, product_code, batch_id])
+  @@unique([tenant_id, product_code, book_id])
+  @@unique([tenant_id, product_code, bundle_id])
+  @@unique([tenant_id, product_code, course_id])
+  @@index([tenant_id, content_type, batch_id])
+  @@index([tenant_id, content_type, book_id])
+  @@index([tenant_id, content_type, bundle_id])
+  @@index([tenant_id, content_type, course_id])
+  @@index([tenant_id, product_code])
+}
+
+model coupon_applicable_items {
+  id             String           @id
+  tenant_id      String
+  coupon_id      String
+  item_type      bundle_item_type
+  course_id      String?
+  book_id        String?
+  bundle_id      String?
+  created_at     DateTime         @default(now())
+  updated_at     DateTime?
+  batch_id       String?
+  test_series_id String?
+  batches        batches?         @relation(fields: [batch_id], references: [id], onDelete: Cascade)
+  books          books?           @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  bundles        bundles?         @relation(fields: [bundle_id], references: [id], onDelete: Cascade)
+  coupons        coupons          @relation(fields: [coupon_id], references: [id], onDelete: Cascade)
+  courses        courses?         @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  test_series    test_series?     @relation(fields: [test_series_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, batch_id])
+  @@index([tenant_id, book_id])
+  @@index([tenant_id, bundle_id])
+  @@index([tenant_id, coupon_id])
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, test_series_id])
+}
+
+model coupon_redemptions {
+  id              String         @id
+  tenant_id       String
+  coupon_id       String
+  member_id       String
+  order_id        String
+  discount_amount Decimal        @db.Decimal(16, 2)
+  currency        String
+  created_at      DateTime       @default(now())
+  coupons         coupons        @relation(fields: [coupon_id], references: [id], onDelete: Cascade)
+  tenant_members  tenant_members @relation(fields: [member_id], references: [id], onDelete: Cascade)
+  payment_orders  payment_orders @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  tenants         tenants        @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, coupon_id, order_id])
+  @@index([tenant_id, coupon_id])
+  @@index([tenant_id, coupon_id, member_id])
+}
+
+model coupons {
+  id                      String                    @id
+  tenant_id               String
+  code                    String
+  discount_type           coupon_discount_type
+  discount_value          Decimal                   @db.Decimal(10, 2)
+  is_active               Boolean                   @default(true)
+  valid_from              DateTime?
+  valid_to                DateTime?
+  max_uses                Int?
+  used_count              Int                       @default(0)
+  created_at              DateTime
+  updated_at              DateTime
+  max_uses_per_user       Int?
+  currency                String?                   @db.VarChar(8)
+  is_public               Boolean                   @default(true)
+  coupon_applicable_items coupon_applicable_items[]
+  coupon_redemptions      coupon_redemptions[]
+  tenants                 tenants                   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  payment_orders          payment_orders[]
+
+  @@unique([tenant_id, code])
+  @@index([tenant_id, code])
+  @@index([tenant_id, is_active])
+}
+
+model course_categories {
+  id          String     @id
+  tenant_id   String
+  course_id   String
+  category_id String
+  created_at  DateTime   @default(now())
+  categories  categories @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  courses     courses    @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, course_id, category_id])
+  @@index([tenant_id, category_id])
+  @@index([tenant_id, course_id])
+}
+
+model course_faqs {
+  id         String   @id
+  tenant_id  String
+  course_id  String
+  question   String
+  answer     String
+  sort_order Int      @default(0)
+  created_at DateTime
+  updated_at DateTime
+  courses    courses  @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, course_id, sort_order])
+}
+
+model course_instructors {
+  id            String      @id
+  tenant_id     String
+  course_id     String
+  instructor_id String
+  sort_order    Int         @default(0)
+  created_at    DateTime    @default(now())
+  courses       courses     @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  instructors   instructors @relation(fields: [instructor_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, course_id, instructor_id])
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, instructor_id])
+}
+
+model course_lessons {
+  id                     String                   @id
+  tenant_id              String
+  course_id              String
+  section_id             String
+  title                  String
+  type                   lesson_type
+  sort_order             Int                      @default(0)
+  is_preview             Boolean                  @default(false)
+  created_at             DateTime
+  updated_at             DateTime
+  assignments            assignments[]
+  courses                courses                  @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  course_sections        course_sections          @relation(fields: [section_id], references: [id], onDelete: Cascade)
+  lectures               lectures[]
+  lesson_resources       lesson_resources[]
+  member_lesson_progress member_lesson_progress[]
+  quizzes                quizzes[]
+
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, course_id, type])
+  @@index([tenant_id, section_id, sort_order])
+}
+
+model course_recommendations {
+  id                    String   @id
+  tenant_id             String
+  course_id             String
+  recommended_course_id String
+  sort_order            Int      @default(0)
+  created_at            DateTime
+  updated_at            DateTime
+  courses               courses  @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, course_id, recommended_course_id])
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, course_id, sort_order])
+}
+
+model course_review_votes {
+  id               String         @id
+  tenant_id        String
+  tenant_member_id String
+  review_id        String
+  vote_type        vote_type
+  created_at       DateTime       @default(now())
+  updated_at       DateTime
+  course_reviews   course_reviews @relation(fields: [review_id], references: [id], onDelete: Cascade)
+  tenant_members   tenant_members @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, tenant_member_id, review_id])
+  @@index([tenant_id, review_id])
+}
+
+model course_reviews {
+  id                  String                @id
+  tenant_id           String
+  tenant_member_id    String
+  course_id           String
+  rating              Int
+  review_text         String?
+  is_visible          Boolean               @default(true)
+  created_at          DateTime
+  updated_at          DateTime
+  course_review_votes course_review_votes[]
+  courses             courses               @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  tenants             tenants               @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_members      tenant_members        @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, tenant_member_id, course_id])
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, course_id, is_visible])
+}
+
+model course_sections {
+  id             String           @id
+  tenant_id      String
+  course_id      String
+  title          String
+  sort_order     Int              @default(0)
+  created_at     DateTime
+  updated_at     DateTime
+  assignments    assignments[]
+  course_lessons course_lessons[]
+  courses        courses          @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  quizzes        quizzes[]
+
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, course_id, sort_order])
+}
+
+model course_syllabus_items {
+  id                       String                   @id
+  tenant_id                String
+  syllabus_section_id      String
+  title                    String
+  preview_url              String?
+  sort_order               Int                      @default(0)
+  created_at               DateTime
+  updated_at               DateTime
+  course_syllabus_sections course_syllabus_sections @relation(fields: [syllabus_section_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, syllabus_section_id])
+  @@index([tenant_id, syllabus_section_id, sort_order])
+}
+
+model course_syllabus_sections {
+  id                    String                  @id
+  tenant_id             String
+  course_id             String
+  title                 String
+  sort_order            Int                     @default(0)
+  created_at            DateTime
+  updated_at            DateTime
+  course_syllabus_items course_syllabus_items[]
+  courses               courses                 @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, course_id, sort_order])
+}
+
+model courses {
+  id                         String                       @id
+  tenant_id                  String
+  title                      String
+  slug                       String
+  subtitle                   String?
+  description                String?
+  price_inr                  Decimal?                     @db.Decimal(10, 2)
+  price_usd                  Decimal?                     @db.Decimal(10, 2)
+  discount_inr               Decimal?                     @db.Decimal(10, 2)
+  discount_usd               Decimal?                     @db.Decimal(10, 2)
+  purchase_mode              purchase_mode                @default(PAID)
+  status                     course_status                @default(DRAFT)
+  mode                       course_mode                  @default(SELF_PACED)
+  difficulty                 course_difficulty            @default(BEGINNER)
+  language                   String[]                     @default(["English"])
+  duration                   String?
+  learning_outcomes          String[]                     @default([])
+  prerequisites              String[]                     @default([])
+  class_timing               String?
+  start_date                 String?
+  sort_order                 Int                          @default(0)
+  created_at                 DateTime
+  updated_at                 DateTime
+  lms_settings               Json?
+  lms_template_id            String?
+  preview_key                String?
+  secondary_thumbnail_key    String?
+  thumbnail_key              String?
+  course_type                course_type                  @default(NORMAL)
+  validity_days              Int?
+  certificate_template_id    String?
+  unlocks_after_type         offering_type?
+  unlocks_after_id           String?
+  assignment_submissions     assignment_submissions[]
+  assignments                assignments[]
+  batch_items                batch_items[]
+  bundle_items               bundle_items[]
+  cart_items                 cart_items[]
+  cart_order_items           cart_order_items[]
+  certificates               certificates[]
+  content_product_links      content_product_links[]
+  coupon_applicable_items    coupon_applicable_items[]
+  course_categories          course_categories[]
+  course_faqs                course_faqs[]
+  course_instructors         course_instructors[]
+  course_lessons             course_lessons[]
+  course_recommendations     course_recommendations[]
+  course_reviews             course_reviews[]
+  course_sections            course_sections[]
+  course_syllabus_sections   course_syllabus_sections[]
+  tenants                    tenants                      @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  enrollments                enrollments[]
+  lectures                   lectures[]
+  member_assignment_progress member_assignment_progress[]
+  member_lecture_progress    member_lecture_progress[]
+  member_lesson_progress     member_lesson_progress[]
+  member_quiz_progress       member_quiz_progress[]
+  quiz_attempts              quiz_attempts[]
+  quizzes                    quizzes[]
+
+  @@unique([tenant_id, slug])
+  @@index([tenant_id, course_type])
+  @@index([tenant_id, mode])
+  @@index([tenant_id, purchase_mode])
+  @@index([tenant_id, status, created_at])
+  @@index([tenant_id, status])
+  @@index([tenant_id, status, sort_order, created_at])
+  @@index([tenant_id, unlocks_after_id])
+}
+
+model enrollments {
+  id               String            @id
+  tenant_id        String
+  tenant_member_id String
+  course_id        String
+  status           enrollment_status @default(ACTIVE)
+  source           enrollment_source @default(FREE)
+  source_bundle_id String?
+  source_coupon_id String?
+  enrolled_at      DateTime          @default(now())
+  completed_at     DateTime?
+  valid_till       DateTime?
+  created_at       DateTime
+  updated_at       DateTime
+  source_batch_id  String?
+  courses          courses           @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  tenants          tenants           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_members   tenant_members    @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, tenant_member_id, course_id])
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, enrolled_at])
+  @@index([tenant_id, source])
+  @@index([tenant_id, status])
+  @@index([tenant_id, tenant_member_id])
+  @@index([tenant_id, tenant_member_id, status])
+}
+
+model entitlement_overrides {
+  id              String       @id
+  entitlement_id  String
+  old_limit_value Int
+  new_limit_value Int
+  reason          String
+  admin_id        String
+  created_at      DateTime     @default(now())
+  entitlements    entitlements @relation(fields: [entitlement_id], references: [id], onDelete: Cascade)
+
+  @@index([admin_id])
+  @@index([entitlement_id])
+}
+
+model entitlements {
+  id                     String                  @id
+  tenant_id              String
+  product_id             String
+  application_code       String
+  feature_key            String
+  product_code           String
+  is_unlimited           Boolean                 @default(false)
+  limit_value            Int
+  used_value             Int                     @default(0)
+  source                 entitlement_sources     @default(PLAN)
+  source_subscription_id String?
+  source_plan_version_id String?
+  source_addon_id        String?
+  is_active              Boolean                 @default(true)
+  archived_at            DateTime?
+  created_at             DateTime
+  updated_at             DateTime
+  entitlement_overrides  entitlement_overrides[]
+  products               products                @relation(fields: [product_id], references: [id])
+  tenants                tenants                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([source_addon_id])
+  @@index([source_subscription_id])
+  @@index([tenant_id, application_code])
+  @@index([tenant_id, feature_key])
+  @@index([tenant_id, is_active])
+  @@index([tenant_id, is_unlimited])
+  @@index([tenant_id, product_code])
+}
+
+model features {
+  id             String       @id
+  application_id String
+  key            String       @unique
+  name           String?
+  description    String?
+  category       String?
+  is_deprecated  Boolean      @default(false)
+  sort_order     Int          @default(0)
+  created_at     DateTime     @default(now())
+  is_navigable   Boolean      @default(false)
+  nav_icon       String?
+  nav_label      String?
+  nav_route      String?
+  nav_sort_order Int          @default(0)
+  applications   applications @relation(fields: [application_id], references: [id])
+  products       products[]
+
+  @@index([application_id])
+}
+
+model instructor_experiences {
+  id            String      @id
+  tenant_id     String
+  instructor_id String
+  company       String
+  company_logo  String?
+  years         Int
+  details       String?
+  sort_order    Int         @default(0)
+  created_at    DateTime
+  updated_at    DateTime
+  instructors   instructors @relation(fields: [instructor_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, instructor_id])
+}
+
+model instructor_socials {
+  id            String      @id
+  tenant_id     String
+  instructor_id String      @unique
+  linkedin_url  String?
+  twitter_url   String?
+  youtube_url   String?
+  github_url    String?
+  website_url   String?
+  facebook_url  String?
+  instagram_url String?
+  created_at    DateTime
+  updated_at    DateTime
+  instructors   instructors @relation(fields: [instructor_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id])
+}
+
+model instructors {
+  id                     String                   @id
+  tenant_id              String
+  user_id                String?
+  bio                    String?
+  expertise              String?
+  profile_url            String?
+  created_at             DateTime
+  updated_at             DateTime
+  email                  String?
+  name                   String
+  book_authors           book_authors[]
+  course_instructors     course_instructors[]
+  instructor_experiences instructor_experiences[]
+  instructor_socials     instructor_socials?
+  tenants                tenants                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_users           tenant_users?            @relation(fields: [user_id], references: [id])
+
+  @@unique([tenant_id, user_id])
+  @@index([tenant_id])
+}
+
+model invoices {
+  id              String         @id
+  tenant_id       String
+  invoice_number  String         @unique
+  invoice_type    invoice_type
+  subscription_id String?
+  order_id        String?
+  member_id       String?
+  currency        String         @db.VarChar(10)
+  subtotal        Decimal        @db.Decimal(16, 2)
+  tax_amount      Decimal        @db.Decimal(16, 2)
+  total_amount    Decimal        @db.Decimal(16, 2)
+  invoice_url     String
+  s3_key          String
+  payment_method  String?
+  transaction_id  String?
+  status          invoice_status @default(GENERATED)
+  generated_at    DateTime       @default(now()) @db.Timestamptz(3)
+  created_at      DateTime       @default(now()) @db.Timestamptz(3)
+  updated_at      DateTime       @db.Timestamptz(3)
+  tenants         tenants        @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([order_id])
+  @@index([subscription_id])
+  @@index([tenant_id, invoice_type, created_at])
+  @@index([tenant_id, member_id, created_at])
+}
+
+model lecture_dropoff_buckets {
+  tenant_id      String
+  lecture_id     String
+  bucket_index   Int
+  sessions_count Int      @default(0)
+  updated_at     DateTime @default(now())
+
+  @@id([tenant_id, lecture_id, bucket_index])
+  @@index([tenant_id, lecture_id])
+}
+
+model lecture_watch_sessions {
+  id                String    @id
+  tenant_id         String
+  tenant_member_id  String
+  course_id         String
+  lecture_id        String
+  started_at        DateTime  @default(now())
+  last_heartbeat_at DateTime  @default(now())
+  ended_at          DateTime?
+  start_position    Int       @default(0)
+  end_position      Int       @default(0)
+  seconds_watched   BigInt    @default(0)
+  device_type       String?
+  user_agent        String?
+  created_at        DateTime  @default(now())
+
+  @@index([tenant_id, course_id, started_at])
+  @@index([tenant_id, lecture_id, started_at])
+  @@index([tenant_id, started_at])
+  @@index([tenant_id, tenant_member_id, started_at])
+}
+
+model lectures {
+  id                      String                    @id
+  tenant_id               String
+  course_id               String
+  lesson_id               String
+  title                   String
+  duration                String?
+  processing_status       video_processing_status   @default(PROCESSING)
+  resource_links          String[]                  @default([])
+  summary                 String?
+  created_at              DateTime
+  updated_at              DateTime
+  video_key               String?
+  video_provider          video_provider?
+  courses                 courses                   @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  course_lessons          course_lessons            @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  member_lecture_progress member_lecture_progress[]
+
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, lesson_id])
+  @@index([tenant_id, video_key])
+}
+
+model lesson_resources {
+  id             String               @id
+  tenant_id      String
+  course_id      String
+  lesson_id      String
+  type           lesson_resource_type
+  title          String
+  url            String?
+  content        String?
+  downloadable   Boolean              @default(false)
+  sort_order     Int                  @default(0)
+  created_at     DateTime             @default(now())
+  updated_at     DateTime
+  course_lessons course_lessons       @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, lesson_id, sort_order])
+}
+
+model member_assignment_progress {
+  id               String         @id
+  tenant_id        String
+  tenant_member_id String
+  assignment_id    String
+  lesson_id        String?
+  course_id        String
+  completed        Boolean        @default(false)
+  completed_at     DateTime?
+  created_at       DateTime       @default(now())
+  updated_at       DateTime
+  assignments      assignments    @relation(fields: [assignment_id], references: [id], onDelete: Cascade)
+  courses          courses        @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  tenant_members   tenant_members @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, tenant_member_id, assignment_id])
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, tenant_member_id, course_id])
+  @@index([tenant_id, tenant_member_id])
+}
+
+model member_book_highlights {
+  id               String         @id
+  tenant_id        String
+  tenant_member_id String
+  book_id          String
+  cfi_range        String
+  text             String
+  color            String         @default("#FFEB3B")
+  created_at       DateTime       @default(now())
+  updated_at       DateTime
+  books            books          @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  tenant_members   tenant_members @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, tenant_member_id, book_id, cfi_range])
+  @@index([tenant_id, tenant_member_id, book_id])
+  @@index([tenant_id, tenant_member_id])
+}
+
+model member_book_page_bookmarks {
+  id               String         @id
+  tenant_id        String
+  tenant_member_id String
+  book_id          String
+  cfi_location     String
+  label            String?
+  created_at       DateTime       @default(now())
+  updated_at       DateTime
+  books            books          @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  tenant_members   tenant_members @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, tenant_member_id, book_id, cfi_location])
+  @@index([tenant_id, tenant_member_id, book_id])
+  @@index([tenant_id, tenant_member_id])
+}
+
+model member_book_progress {
+  id               String         @id
+  tenant_id        String
+  tenant_member_id String
+  book_id          String
+  last_page        Int?
+  completed        Boolean        @default(false)
+  created_at       DateTime
+  updated_at       DateTime
+  location         String?
+  books            books          @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  tenant_members   tenant_members @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, tenant_member_id, book_id])
+  @@index([tenant_id, tenant_member_id])
+}
+
+model member_bookmarks {
+  id               String         @id
+  tenant_id        String
+  tenant_member_id String
+  bookmark_type    bookmark_type
+  course_id        String?
+  book_id          String?
+  bundle_id        String?
+  created_at       DateTime       @default(now())
+  updated_at       DateTime
+  tenants          tenants        @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_members   tenant_members @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, created_at])
+  @@index([tenant_id, tenant_member_id, bookmark_type])
+  @@index([tenant_id, tenant_member_id])
+}
+
+model member_lecture_progress {
+  id                    String         @id
+  tenant_id             String
+  tenant_member_id      String
+  course_id             String
+  lecture_id            String
+  watched_duration      Int            @default(0)
+  completed             Boolean        @default(false)
+  last_watched_at       DateTime       @default(now())
+  created_at            DateTime       @default(now())
+  updated_at            DateTime
+  last_position_seconds Int            @default(0)
+  total_watch_seconds   BigInt         @default(0)
+  courses               courses        @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  lectures              lectures       @relation(fields: [lecture_id], references: [id], onDelete: Cascade)
+  tenant_members        tenant_members @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, tenant_member_id, lecture_id])
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, last_watched_at])
+  @@index([tenant_id, tenant_member_id, course_id])
+}
+
+model member_lesson_progress {
+  id               String         @id
+  tenant_id        String
+  tenant_member_id String
+  lesson_id        String
+  course_id        String
+  completed        Boolean        @default(false)
+  completed_at     DateTime?
+  created_at       DateTime       @default(now())
+  updated_at       DateTime
+  courses          courses        @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  course_lessons   course_lessons @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  tenant_members   tenant_members @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, tenant_member_id, lesson_id])
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, tenant_member_id, course_id])
+  @@index([tenant_id, tenant_member_id])
+}
+
+model member_notifications {
+  id             String                   @id @db.VarChar(26)
+  tenant_id      String                   @db.VarChar(26)
+  member_id      String                   @db.VarChar(26)
+  type           member_notification_type
+  title          String                   @db.VarChar(255)
+  message        String
+  action_url     String?                  @db.VarChar(500)
+  is_read        Boolean                  @default(false)
+  read_at        DateTime?
+  metadata       Json?
+  created_at     DateTime                 @default(now())
+  updated_at     DateTime
+  tenant_members tenant_members           @relation(fields: [member_id], references: [id], onDelete: Cascade)
+  tenants        tenants                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, member_id, is_read, created_at(sort: Desc)])
+  @@index([tenant_id, member_id, type, created_at(sort: Desc)])
+}
+
+model member_payment_details {
+  id                  String                     @id
+  tenant_id           String
+  tenant_member_id    String
+  type                member_payment_detail_type
+  upi_vpa             String?
+  account_number      String?
+  ifsc_code           String?
+  bank_name           String?
+  account_holder_name String?
+  pan_number          String?
+  paypal_email        String?
+  is_primary          Boolean                    @default(true)
+  created_at          DateTime                   @default(now())
+  updated_at          DateTime
+  tenants             tenants                    @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_members      tenant_members             @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, tenant_member_id, type])
+  @@index([tenant_id, tenant_member_id])
+}
+
+model member_quiz_progress {
+  id               String         @id
+  tenant_id        String
+  tenant_member_id String
+  quiz_id          String
+  lesson_id        String?
+  course_id        String
+  completed        Boolean        @default(false)
+  completed_at     DateTime?
+  created_at       DateTime       @default(now())
+  updated_at       DateTime
+  courses          courses        @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  quizzes          quizzes        @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
+  tenant_members   tenant_members @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, tenant_member_id, quiz_id])
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, tenant_member_id, course_id])
+  @@index([tenant_id, tenant_member_id])
+}
+
+model payment_orders {
+  id                          String                      @id
+  tenant_id                   String
+  tenant_member_id            String
+  gateway_connection_id       String?
+  order_number                String
+  order_type                  order_type
+  item_id                     String
+  currency                    String
+  base_amount                 Decimal                     @db.Decimal(16, 2)
+  discount_amount             Decimal                     @default(0) @db.Decimal(16, 2)
+  coupon_id                   String?
+  coupon_code_snapshot        String?
+  net_amount                  Decimal                     @db.Decimal(16, 2)
+  tax_amount                  Decimal                     @default(0) @db.Decimal(16, 2)
+  total_amount                Decimal                     @db.Decimal(16, 2)
+  platform_fee                Decimal                     @default(0) @db.Decimal(16, 2)
+  tenant_payout_amount        Decimal?                    @db.Decimal(16, 2)
+  gateway_provider_name       String
+  gateway_order_id            String?
+  gateway_payment_id          String?
+  gateway_signature           String?
+  status                      order_status                @default(CREATED)
+  paid_at                     DateTime?
+  failed_at                   DateTime?
+  refunded_at                 DateTime?
+  failure_reason              String?
+  idempotency_key             String?                     @unique
+  metadata                    Json?
+  created_at                  DateTime                    @default(now())
+  updated_at                  DateTime
+  fx_rate_to_tenant_default   Decimal?                    @db.Decimal(18, 8)
+  resolved_country            String?                     @db.VarChar(2)
+  tenant_default_currency     String?                     @db.VarChar(8)
+  cart_order_items            cart_order_items[]
+  coupon_redemptions          coupon_redemptions[]
+  coupons                     coupons?                    @relation(fields: [coupon_id], references: [id])
+  tenant_gateway_connections  tenant_gateway_connections? @relation(fields: [gateway_connection_id], references: [id])
+  tenants                     tenants                     @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_members              tenant_members              @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+  refunds                     refunds[]
+
+  @@unique([tenant_id, order_number])
+  @@index([gateway_order_id])
+  @@index([gateway_payment_id])
+  @@index([tenant_id, created_at])
+  @@index([tenant_id, currency, created_at])
+  @@index([tenant_id, item_id])
+  @@index([tenant_id, status])
+  @@index([tenant_id, status, paid_at])
+  @@index([tenant_id, tenant_member_id])
+}
+
+model payment_receipt_counters {
+  fiscal_year   String   @id
+  last_sequence Int      @default(0)
+  updated_at    DateTime
+}
+
+model payment_receipt_items {
+  id               String           @id
+  receipt_id       String
+  kind             String           @default("OTHER")
+  description      String
+  quantity         Decimal          @default(1) @db.Decimal(10, 2)
+  unit_price       BigInt           @default(0)
+  line_total       BigInt           @default(0)
+  sort_order       Int              @default(0)
+  created_at       DateTime         @default(now())
+  payment_receipts payment_receipts @relation(fields: [receipt_id], references: [id], onDelete: Cascade)
+
+  @@index([receipt_id])
+}
+
+model payment_receipts {
+  id                        String                  @id
+  receipt_number            String?                 @unique
+  status                    payment_receipt_status  @default(DRAFT)
+  currency                  String                  @default("INR")
+  tenant_id                 String?
+  buyer_name                String
+  buyer_legal_name          String?
+  buyer_email               String?
+  buyer_phone               String?
+  buyer_address_line1       String?
+  buyer_address_line2       String?
+  buyer_city                String?
+  buyer_state               String?
+  buyer_country             String?                 @default("India")
+  buyer_postal_code         String?
+  buyer_gstin               String?
+  buyer_pan                 String?
+  buyer_registration_number String?
+  receipt_date              DateTime
+  payment_method            String?
+  payment_reference         String?
+  tax_rate                  Decimal                 @default(18) @db.Decimal(5, 2)
+  tax_mode                  tax_mode                @default(EXCLUSIVE)
+  subtotal_amount           BigInt                  @default(0)
+  taxable_amount            BigInt                  @default(0)
+  tax_amount                BigInt                  @default(0)
+  total_amount              BigInt                  @default(0)
+  notes                     String?
+  terms                     String?
+  pdf_storage_key           String?
+  pdf_generated_at          DateTime?
+  sent_at                   DateTime?
+  sent_to_email             String?
+  cancelled_at              DateTime?
+  created_by                String
+  updated_by                String?
+  created_at                DateTime                @default(now())
+  updated_at                DateTime
+  payment_receipt_items     payment_receipt_items[]
+
+  @@index([created_at])
+  @@index([status])
+  @@index([tenant_id])
+}
+
+model payment_webhook_events {
+  id                         String                     @id
+  tenant_id                  String
+  gateway_connection_id      String
+  provider_name              String
+  event_type                 String
+  event_id                   String
+  payload                    Json
+  status                     payment_webhook_status     @default(PENDING)
+  processed_at               DateTime?
+  error_message              String?
+  retry_count                Int                        @default(0)
+  created_at                 DateTime                   @default(now())
+  tenant_gateway_connections tenant_gateway_connections @relation(fields: [gateway_connection_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, provider_name, event_id])
+  @@index([status, created_at])
+  @@index([tenant_id, status])
+}
+
+model pending_subscription_checkouts {
+  id                       String        @id
+  tenant_id                String
+  external_subscription_id String        @unique
+  plan_version_id          String
+  billing_cycle            billing_cycle @default(MONTHLY)
+  currency                 String
+  created_at               DateTime      @default(now())
+  billing_provider_name    String        @default("RAZORPAY")
+  plan_versions            plan_versions @relation(fields: [plan_version_id], references: [id])
+  tenants                  tenants       @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([created_at])
+  @@index([external_subscription_id])
+  @@index([tenant_id])
+}
+
+model plan_applications {
+  id             String       @id
+  plan_id        String
+  application_id String
+  created_at     DateTime     @default(now())
+  applications   applications @relation(fields: [application_id], references: [id])
+  plans          plans        @relation(fields: [plan_id], references: [id], onDelete: Cascade)
+
+  @@unique([plan_id, application_id])
+  @@index([application_id])
+  @@index([plan_id])
+}
+
+model plan_version_billing_mappings {
+  id                  String            @id
+  plan_version_id     String
+  billing_provider_id String
+  billing_cycle       billing_cycle
+  currency            String
+  external_plan_id    String
+  created_at          DateTime          @default(now())
+  updated_at          DateTime
+  billing_providers   billing_providers @relation(fields: [billing_provider_id], references: [id])
+  plan_versions       plan_versions     @relation(fields: [plan_version_id], references: [id], onDelete: Cascade)
+
+  @@unique([plan_version_id, billing_provider_id, billing_cycle, currency])
+  @@index([billing_provider_id])
+  @@index([plan_version_id])
+}
+
+model plan_version_products {
+  id              String        @id
+  plan_version_id String
+  product_id      String
+  limit_value     Int
+  is_unlimited    Boolean       @default(false)
+  created_at      DateTime      @default(now())
+  plan_versions   plan_versions @relation(fields: [plan_version_id], references: [id], onDelete: Cascade)
+  products        products      @relation(fields: [product_id], references: [id])
+
+  @@unique([plan_version_id, product_id])
+  @@index([plan_version_id])
+  @@index([product_id])
+}
+
+model plan_versions {
+  id                             String                           @id
+  plan_id                        String
+  version                        Int                              @default(1)
+  price_monthly_inr              Decimal                          @db.Decimal(10, 2)
+  price_yearly_inr               Decimal                          @db.Decimal(10, 2)
+  discount_monthly_inr_type      discount_type                    @default(NONE)
+  discount_monthly_inr_value     Decimal                          @default(0) @db.Decimal(10, 2)
+  discount_yearly_inr_type       discount_type                    @default(NONE)
+  discount_yearly_inr_value      Decimal                          @default(0) @db.Decimal(10, 2)
+  price_monthly_usd              Decimal                          @db.Decimal(10, 2)
+  price_yearly_usd               Decimal                          @db.Decimal(10, 2)
+  discount_monthly_usd_type      discount_type                    @default(NONE)
+  discount_monthly_usd_value     Decimal                          @default(0) @db.Decimal(10, 2)
+  discount_yearly_usd_type       discount_type                    @default(NONE)
+  discount_yearly_usd_value      Decimal                          @default(0) @db.Decimal(10, 2)
+  is_active                      Boolean                          @default(true)
+  published_at                   DateTime?
+  retired_at                     DateTime?
+  created_at                     DateTime
+  is_offer                       Boolean                          @default(false)
+  offer_description              String?
+  offer_name                     String?
+  offer_valid_from               DateTime?
+  offer_valid_to                 DateTime?
+  pricing_frequency              pricing_frequency                @default(BOTH)
+  grace_period_days              Int                              @default(7)
+  discount_two_yearly_inr_type   discount_type                    @default(NONE)
+  discount_two_yearly_inr_value  Decimal?                         @default(0) @db.Decimal(10, 2)
+  discount_two_yearly_usd_type   discount_type                    @default(NONE)
+  discount_two_yearly_usd_value  Decimal?                         @default(0) @db.Decimal(10, 2)
+  price_two_yearly_inr           Decimal?                         @default(0) @db.Decimal(10, 2)
+  price_two_yearly_usd           Decimal?                         @default(0) @db.Decimal(10, 2)
+  purchase_mode                  purchase_mode                    @default(PAID)
+  pending_subscription_checkouts pending_subscription_checkouts[]
+  plan_version_billing_mappings  plan_version_billing_mappings[]
+  plan_version_products          plan_version_products[]
+  plans                          plans                            @relation(fields: [plan_id], references: [id], onDelete: Cascade)
+  subscriptions                  subscriptions[]
+
+  @@unique([plan_id, version])
+  @@index([plan_id])
+}
+
+model plans {
+  id                                 String                               @id
+  code                               String                               @unique
+  name                               String
+  description                        String?
+  plan_type                          plan_type                            @default(SINGLE_APP)
+  sort_order                         Int                                  @default(0)
+  is_active                          Boolean                              @default(true)
+  is_public                          Boolean                              @default(true)
+  created_at                         DateTime
+  updated_at                         DateTime
+  plan_applications                  plan_applications[]
+  plan_versions                      plan_versions[]
+}
+
+model platform_exchange_rates {
+  id             String   @id @db.VarChar(26)
+  base_currency  String   @db.VarChar(8)
+  quote_currency String   @db.VarChar(8)
+  rate           Decimal  @db.Decimal(18, 8)
+  source         String   @db.VarChar(64)
+  fetched_at     DateTime @db.Timestamptz(3)
+  created_at     DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([base_currency, quote_currency, fetched_at(sort: Desc)])
+}
+
+model platform_notification_suppressions {
+  id         String   @id @db.VarChar(26)
+  email      String?  @unique @db.VarChar(320)
+  phone      String?  @unique @db.VarChar(20)
+  reason     String?  @db.VarChar(200)
+  source     String?  @db.VarChar(40)
+  created_at DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([email])
+  @@index([phone])
+}
+
+model products {
+  id                    String                  @id
+  feature_id            String
+  code                  String                  @unique
+  constraint_type       constraint_type
+  unit                  String?
+  is_hard_limit         Boolean                 @default(true)
+  created_at            DateTime                @default(now())
+  title                 String?
+  usage_scope           usage_scope_type        @default(TENANT)
+  usage_window          usage_window_type       @default(LIFETIME)
+  addons                addons[]
+  content_product_links content_product_links[]
+  entitlements          entitlements[]
+  plan_version_products plan_version_products[]
+  features              features                @relation(fields: [feature_id], references: [id])
+
+  @@index([feature_id])
+}
+
+model question_serve_stats {
+  id           String   @id
+  tenant_id    String
+  owner_type   String
+  owner_id     String
+  question_id  String
+  served_count Int      @default(0)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now())
+
+  @@unique([tenant_id, owner_type, owner_id, question_id])
+  @@index([tenant_id, owner_type, owner_id])
+}
+
+model question_upload_assets {
+  id             String   @id
+  tenant_id      String
+  name           String
+  question_count Int      @default(0)
+  questions      Json
+  created_by     String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @default(now())
+
+  @@index([tenant_id, created_at])
+}
+
+model quiz_attempt_answers {
+  id             String         @id
+  tenant_id      String
+  attempt_id     String
+  question_id    String
+  option_id      String
+  is_correct     Boolean        @default(false)
+  marks_awarded  Int            @default(0)
+  created_at     DateTime       @default(now())
+  answer         Json?
+  quiz_attempts  quiz_attempts  @relation(fields: [attempt_id], references: [id], onDelete: Cascade)
+  quiz_options   quiz_options   @relation(fields: [option_id], references: [id], onDelete: Cascade)
+  quiz_questions quiz_questions @relation(fields: [question_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, attempt_id, question_id])
+  @@index([tenant_id, attempt_id])
+}
+
+model quiz_attempts {
+  id                   String                 @id
+  tenant_id            String
+  tenant_member_id     String
+  course_id            String
+  quiz_id              String
+  score                Int                    @default(0)
+  total_marks          Int                    @default(0)
+  status               quiz_attempt_status    @default(IN_PROGRESS)
+  started_at           DateTime               @default(now())
+  completed_at         DateTime?
+  created_at           DateTime
+  updated_at           DateTime
+  question_ids         String[]               @default([])
+  proctoring_flags     Json?
+  tab_switch_count     Int                    @default(0)
+  quiz_attempt_answers quiz_attempt_answers[]
+  courses              courses                @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  quizzes              quizzes                @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
+  tenant_members       tenant_members         @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, created_at])
+  @@index([tenant_id, quiz_id])
+  @@index([tenant_id, tenant_member_id, quiz_id])
+}
+
+model quiz_options {
+  id                   String                 @id
+  tenant_id            String
+  question_id          String
+  option_text          String
+  is_correct           Boolean                @default(false)
+  explanation          String?
+  sort_order           Int                    @default(0)
+  created_at           DateTime
+  updated_at           DateTime
+  blank_index          Int?
+  quiz_attempt_answers quiz_attempt_answers[]
+  quiz_questions       quiz_questions         @relation(fields: [question_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, question_id])
+}
+
+model quiz_questions {
+  id                   String                 @id
+  tenant_id            String
+  quiz_id              String
+  question             String
+  marks                Int                    @default(1)
+  sort_order           Int                    @default(0)
+  created_at           DateTime
+  updated_at           DateTime
+  question_type        quiz_question_type     @default(MCQ)
+  source_question_id   String?
+  quiz_attempt_answers quiz_attempt_answers[]
+  quiz_options         quiz_options[]
+  quizzes              quizzes                @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, quiz_id])
+  @@index([tenant_id, quiz_id, sort_order])
+}
+
+model quizzes {
+  id                       String                 @id
+  tenant_id                String
+  course_id                String
+  lesson_id                String?
+  title                    String
+  created_at               DateTime
+  updated_at               DateTime
+  ai_generated             Boolean                @default(false)
+  due_date                 DateTime?
+  instructions             String?
+  max_score                Int                    @default(100)
+  pass_percentage          Int                    @default(60)
+  scope                    quiz_scope             @default(LESSON)
+  section_id               String?
+  sort_order               Int                    @default(0)
+  source_lecture_id        String?
+  status                   quiz_status            @default(DRAFT)
+  random_question_count    Int?
+  allow_reattempt          Boolean                @default(true)
+  max_attempts             Int?
+  calculator_mode          String                 @default("NONE")
+  proctor_camera           Boolean                @default(false)
+  proctor_max_tab_switches Int?
+  proctoring_enabled       Boolean                @default(false)
+  bank_selection           Json?
+  question_bank_id         String?
+  duration_min             Int?
+  member_quiz_progress     member_quiz_progress[]
+  quiz_attempts            quiz_attempts[]
+  quiz_questions           quiz_questions[]
+  courses                  courses                @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  course_lessons           course_lessons?        @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  course_sections          course_sections?       @relation(fields: [section_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, course_id])
+  @@index([tenant_id, course_id, status])
+  @@index([tenant_id, lesson_id])
+  @@index([tenant_id, section_id])
+  @@index([tenant_id, status])
+}
+
+model refunds {
+  id                String         @id
+  tenant_id         String
+  order_id          String
+  gateway_refund_id String?
+  amount            Decimal        @db.Decimal(16, 2)
+  reason            String?
+  status            refund_status  @default(INITIATED)
+  initiated_by      String?
+  processed_at      DateTime?
+  created_at        DateTime       @default(now())
+  updated_at        DateTime
+  payment_orders    payment_orders @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([gateway_refund_id])
+  @@index([tenant_id, order_id])
+  @@index([tenant_id, status])
+}
+
+model subscription_events {
+  id                String        @id
+  subscription_id   String
+  tenant_id         String
+  event_type        String
+  event_source      String
+  provider_event_id String?
+  metadata          Json?
+  created_at        DateTime      @default(now())
+  subscriptions     subscriptions @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
+  tenants           tenants       @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([event_type])
+  @@index([subscription_id])
+  @@index([tenant_id])
+}
+
+model subscriptions {
+  id                       String                @id
+  tenant_id                String
+  plan_version_id          String
+  plan_code_snapshot       String
+  plan_name_snapshot       String
+  plan_version_snapshot    Int
+  billing_cycle            billing_cycle         @default(MONTHLY)
+  currency                 String
+  original_price           Decimal               @db.Decimal(10, 2)
+  discount_applied         Decimal               @default(0) @db.Decimal(10, 2)
+  price_snapshot           Decimal               @db.Decimal(10, 2)
+  billing_provider_id      String?
+  external_subscription_id String?               @unique
+  external_customer_id     String?
+  started_at               DateTime              @default(now())
+  current_period_start     DateTime              @default(now())
+  current_period_end       DateTime
+  cancelled_at             DateTime?
+  cancel_effective_at      DateTime?
+  status                   subscription_status   @default(PENDING)
+  created_at               DateTime
+  updated_at               DateTime
+  grace_period_ends_at     DateTime?
+  billing_provider_name    String?
+  dunning_started_at       DateTime?
+  last_payment_attempt_at  DateTime?
+  payment_failure_count    Int                   @default(0)
+  subscription_events      subscription_events[]
+  billing_providers        billing_providers?    @relation(fields: [billing_provider_id], references: [id])
+  plan_versions            plan_versions         @relation(fields: [plan_version_id], references: [id])
+  tenants                  tenants               @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_applications      tenant_applications[]
+
+  @@index([external_subscription_id])
+  @@index([status])
+  @@index([tenant_id])
+}
+
+model tenant_active_learners_daily {
+  tenant_id              String
+  date                   DateTime
+  distinct_members_count Int      @default(0)
+  updated_at             DateTime @default(now())
+
+  @@id([tenant_id, date])
+}
+
+model tenant_addon_events {
+  id              String                  @id
+  tenant_addon_id String
+  tenant_id       String
+  addon_id        String
+  event_type      tenant_addon_event_type
+  old_status      tenant_addon_status?
+  new_status      tenant_addon_status?
+  reason          String?
+  admin_id        String?
+  is_system       Boolean                 @default(false)
+  metadata        Json?
+  created_at      DateTime                @default(now())
+  admin_users     admin_users?            @relation(fields: [admin_id], references: [id])
+  tenant_addons   tenant_addons           @relation(fields: [tenant_addon_id], references: [id], onDelete: Cascade)
+
+  @@index([addon_id])
+  @@index([admin_id])
+  @@index([created_at])
+  @@index([event_type])
+  @@index([tenant_addon_id])
+  @@index([tenant_id])
+}
+
+model tenant_addons {
+  id                    String                @id
+  tenant_id             String
+  addon_id              String
+  source                tenant_addon_source
+  status                tenant_addon_status   @default(ACTIVE)
+  custom_grant_value    Int?
+  addon_subscription_id String?               @unique
+  entitlement_id        String?               @unique
+  granted_by            String?
+  reason                String?
+  activated_at          DateTime              @default(now())
+  cancelled_at          DateTime?
+  expires_at            DateTime?
+  created_at            DateTime
+  updated_at            DateTime
+  tenant_addon_events   tenant_addon_events[]
+  addons                addons                @relation(fields: [addon_id], references: [id])
+  addon_subscriptions   addon_subscriptions?  @relation(fields: [addon_subscription_id], references: [id])
+  tenants               tenants               @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, addon_id, status])
+  @@index([addon_id])
+  @@index([status])
+  @@index([tenant_id])
+}
+
+model tenant_admin_otp_codes {
+  id           String       @id
+  user_id      String
+  identifier   String
+  code         String
+  channel      String
+  expires_at   DateTime
+  verified     Boolean      @default(false)
+  attempts     Int          @default(0)
+  created_at   DateTime     @default(now())
+  tenant_users tenant_users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([expires_at])
+  @@index([user_id, identifier, channel])
+}
+
+model tenant_admin_signup_otp_codes {
+  id         String   @id
+  phone      String
+  code       String
+  channel    String   @default("email")
+  expires_at DateTime
+  verified   Boolean  @default(false)
+  attempts   Int      @default(0)
+  created_at DateTime @default(now())
+
+  @@index([expires_at])
+  @@index([phone, created_at])
+}
+
+model tenant_application_events {
+  id                    String                @id
+  tenant_application_id String
+  tenant_id             String
+  application_id        String
+  event_type            tenant_app_event_type
+  old_status            tenant_app_status?
+  new_status            tenant_app_status
+  reason                String?
+  admin_user_id         String?
+  is_system             Boolean               @default(false)
+  metadata              Json?
+  created_at            DateTime              @default(now())
+  admin_users           admin_users?          @relation(fields: [admin_user_id], references: [id])
+  tenant_applications   tenant_applications   @relation(fields: [tenant_application_id], references: [id], onDelete: Cascade)
+
+  @@index([admin_user_id])
+  @@index([application_id])
+  @@index([created_at])
+  @@index([event_type])
+  @@index([tenant_application_id])
+  @@index([tenant_id])
+}
+
+model tenant_applications {
+  id                        String                      @id
+  tenant_id                 String
+  application_id            String
+  status                    tenant_app_status           @default(ACTIVE)
+  activated_at              DateTime                    @default(now())
+  suspended_at              DateTime?
+  trial_ends_at             DateTime?
+  created_at                DateTime
+  updated_at                DateTime
+  grant_reason              String?
+  granted_by                String?
+  source                    tenant_app_source
+  source_subscription_id    String?
+  tenant_application_events tenant_application_events[]
+  applications              applications                @relation(fields: [application_id], references: [id])
+  admin_users               admin_users?                @relation(fields: [granted_by], references: [id])
+  subscriptions             subscriptions?              @relation(fields: [source_subscription_id], references: [id])
+  tenants                   tenants                     @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, application_id])
+  @@index([application_id])
+  @@index([source])
+  @@index([source_subscription_id])
+  @@index([status])
+  @@index([tenant_id])
+}
+
+model tenant_audit_logs {
+  id             String   @id
+  tenant_id      String
+  actor_user_id  String?
+  actor_email    String?
+  actor_name     String?
+  action         String
+  category       String
+  resource_type  String?
+  resource_id    String?
+  resource_label String?
+  summary        String
+  metadata       Json?
+  succeeded      Boolean  @default(true)
+  ip_address     String?
+  user_agent     String?
+  device         String?
+  browser        String?
+  os             String?
+  country        String?
+  region         String?
+  city           String?
+  created_at     DateTime @default(now())
+
+  @@index([created_at])
+  @@index([tenant_id, action, created_at])
+  @@index([tenant_id, actor_user_id, created_at])
+  @@index([tenant_id, category, created_at])
+  @@index([tenant_id, created_at])
+  @@index([tenant_id, resource_type, resource_id])
+}
+
+model tenant_auth_config {
+  id                        String   @id
+  tenant_id                 String   @unique
+  email_password_enabled    Boolean  @default(true)
+  google_oauth_enabled      Boolean  @default(false)
+  email_otp_enabled         Boolean  @default(false)
+  phone_otp_enabled         Boolean  @default(false)
+  signup_enabled            Boolean  @default(true)
+  auto_signup_on_login      Boolean  @default(false)
+  created_at                DateTime @default(now())
+  updated_at                DateTime
+  phone_number_required     Boolean  @default(false)
+  google_client_id          String?
+  easy_checkout_enabled     Boolean  @default(false)
+  name_confirmation_enabled Boolean  @default(false)
+  tenants                   tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id])
+}
+
+model tenant_bulk_imports {
+  id                String                        @id
+  tenant_id         String
+  acting_user_id    String
+  scope_type        tenant_bulk_import_scope_type
+  scope_id          String?
+  source            tenant_bulk_import_source     @default(CSV)
+  status            tenant_bulk_import_status     @default(QUEUED)
+  original_filename String?
+  total_rows        Int                           @default(0)
+  created_count     Int                           @default(0)
+  merged_count      Int                           @default(0)
+  granted_count     Int                           @default(0)
+  skipped_count     Int                           @default(0)
+  error_count       Int                           @default(0)
+  report_s3_key     String?
+  failure_reason    String?
+  started_at        DateTime?
+  completed_at      DateTime?
+  created_at        DateTime                      @default(now())
+  updated_at        DateTime                      @default(now())
+  tenants           tenants                       @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, created_at])
+  @@index([tenant_id, scope_type, scope_id])
+}
+
+model tenant_certificate_assignments {
+  id                      String                @id
+  tenant_id               String
+  offering_type           linkable_content_type
+  preset_template         String?
+  certificate_template_id String?
+  certificate_logo        String?
+  created_at              DateTime              @default(now())
+  updated_at              DateTime              @default(now())
+
+  @@unique([tenant_id, offering_type])
+  @@index([tenant_id])
+}
+
+model tenant_currencies {
+  id         String   @id
+  tenant_id  String
+  currency   String   @db.VarChar(8)
+  is_default Boolean  @default(false)
+  countries  Json     @default("[]")
+  is_active  Boolean  @default(true)
+  sort_order Int      @default(0)
+  created_at DateTime @default(now())
+  updated_at DateTime
+  tenants    tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, currency])
+  @@index([tenant_id, is_default])
+}
+
+model tenant_domains {
+  id                   String        @id
+  tenant_id            String
+  domain_type          domain_type
+  domain_name          String        @unique
+  subdomain_prefix     String?
+  hostname_id          String?
+  status               domain_status @default(PENDING_VERIFICATION)
+  error_message        String?
+  is_primary           Boolean       @default(false)
+  created_at           DateTime      @default(now())
+  updated_at           DateTime
+  verified_at          DateTime?
+  ssl_status           String?
+  ownership_verified   Boolean       @default(false)
+  ssl_active           Boolean       @default(false)
+  verification_records Json?
+  tenants              tenants       @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([domain_type])
+  @@index([status])
+  @@index([tenant_id])
+}
+
+model tenant_email_domain_health_checks {
+  id                           String                       @id @db.VarChar(26)
+  sending_domain_id            String                       @db.VarChar(26)
+  dkim_status                  String                       @db.VarChar(32)
+  mail_from_status             String                       @db.VarChar(32)
+  spf_present                  Boolean                      @default(false)
+  dmarc_present                Boolean                      @default(false)
+  failures                     Json?
+  created_at                   DateTime                     @default(now())
+  tenant_email_sending_domains tenant_email_sending_domains @relation(fields: [sending_domain_id], references: [id], onDelete: Cascade)
+
+  @@index([sending_domain_id, created_at(sort: Desc)])
+}
+
+model tenant_email_messages {
+  id                             String                          @id @db.VarChar(26)
+  tenant_id                      String                          @db.VarChar(26)
+  category                       email_message_category
+  sending_domain_id              String?                         @db.VarChar(26)
+  sender_identity_id             String?                         @db.VarChar(26)
+  from_address                   String                          @db.VarChar(320)
+  to_address                     String                          @db.VarChar(320)
+  subject                        String                          @db.VarChar(998)
+  template_key                   String?                         @db.VarChar(128)
+  campaign_id                    String?                         @db.VarChar(26)
+  ses_message_id                 String?                         @unique @db.VarChar(255)
+  status                         email_message_status            @default(QUEUED)
+  bounce_type                    String?                         @db.VarChar(32)
+  bounce_sub_type                String?                         @db.VarChar(64)
+  complaint_feedback_type        String?                         @db.VarChar(64)
+  delivered_at                   DateTime?
+  bounced_at                     DateTime?
+  complained_at                  DateTime?
+  opened_at                      DateTime?
+  clicked_at                     DateTime?
+  metadata                       Json?
+  idempotency_key                String?                         @db.VarChar(128)
+  created_at                     DateTime                        @default(now())
+  updated_at                     DateTime
+  tenant_email_sender_identities tenant_email_sender_identities? @relation(fields: [sender_identity_id], references: [id])
+  tenant_email_sending_domains   tenant_email_sending_domains?   @relation(fields: [sending_domain_id], references: [id])
+  tenants                        tenants                         @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_email_suppressions      tenant_email_suppressions[]
+
+  @@unique([tenant_id, idempotency_key])
+  @@index([tenant_id, campaign_id])
+  @@index([tenant_id, created_at(sort: Desc)])
+  @@index([tenant_id, status])
+}
+
+model tenant_email_reputation_events {
+  id             String                         @id @db.VarChar(26)
+  tenant_id      String                         @db.VarChar(26)
+  from_status    email_sending_tenant_status
+  to_status      email_sending_tenant_status
+  trigger        email_reputation_event_trigger
+  triggered_by   String?                        @db.VarChar(64)
+  reason         String                         @db.VarChar(512)
+  rates_snapshot Json
+  created_at     DateTime                       @default(now())
+  tenants        tenants                        @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, created_at(sort: Desc)])
+  @@index([trigger])
+}
+
+model tenant_email_sender_identities {
+  id                           String                       @id @db.VarChar(26)
+  tenant_id                    String                       @db.VarChar(26)
+  sending_domain_id            String                       @db.VarChar(26)
+  email_address                String                       @db.VarChar(320)
+  display_name                 String?                      @db.VarChar(255)
+  reply_to                     String?                      @db.VarChar(320)
+  status                       email_sender_identity_status @default(ACTIVE)
+  is_default_transactional     Boolean                      @default(false)
+  is_default_notification      Boolean                      @default(false)
+  is_default_marketing         Boolean                      @default(false)
+  created_at                   DateTime                     @default(now())
+  updated_at                   DateTime
+  tenant_email_messages        tenant_email_messages[]
+  tenant_email_sending_domains tenant_email_sending_domains @relation(fields: [sending_domain_id], references: [id], onDelete: Cascade)
+  tenants                      tenants                      @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, email_address])
+  @@index([sending_domain_id])
+  @@index([tenant_id, status])
+}
+
+model tenant_email_sending_domains {
+  id                                String                              @id @db.VarChar(26)
+  tenant_id                         String                              @db.VarChar(26)
+  subdomain                         String                              @db.VarChar(253)
+  mail_from_subdomain               String                              @db.VarChar(253)
+  ses_configuration_set             String                              @db.VarChar(64)
+  status                            email_sending_domain_status         @default(PENDING)
+  dkim_status                       String?                             @db.VarChar(32)
+  mail_from_status                  String?                             @db.VarChar(32)
+  dns_records                       Json
+  failure_reason                    String?                             @db.VarChar(512)
+  verified_at                       DateTime?
+  last_checked_at                   DateTime?
+  created_at                        DateTime                            @default(now())
+  updated_at                        DateTime
+  tenant_email_domain_health_checks tenant_email_domain_health_checks[]
+  tenant_email_messages             tenant_email_messages[]
+  tenant_email_sender_identities    tenant_email_sender_identities[]
+  tenants                           tenants                             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, subdomain])
+  @@index([status])
+  @@index([tenant_id])
+}
+
+model tenant_email_suppressions {
+  id                    String                   @id @db.VarChar(26)
+  tenant_id             String                   @db.VarChar(26)
+  email                 String                   @db.VarChar(320)
+  reason                email_suppression_reason
+  source_message_id     String?                  @db.VarChar(26)
+  category_scope        email_message_category?
+  notes                 String?
+  created_at            DateTime                 @default(now())
+  updated_at            DateTime
+  tenant_email_messages tenant_email_messages?   @relation(fields: [source_message_id], references: [id])
+  tenants               tenants                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, email, category_scope])
+  @@index([tenant_id, email])
+  @@index([tenant_id, reason])
+}
+
+model tenant_gateway_connections {
+  id                        String                      @id
+  tenant_id                 String
+  provider_id               String
+  mode                      gateway_mode
+  label                     String?
+  credentials_encrypted     Json?
+  platform_commission_pct   Decimal?                    @db.Decimal(5, 2)
+  platform_commission_flat  Decimal?                    @db.Decimal(16, 2)
+  is_active                 Boolean                     @default(false)
+  is_verified               Boolean                     @default(false)
+  connected_at              DateTime?
+  status                    gateway_connection_status   @default(PENDING)
+  created_at                DateTime                    @default(now())
+  updated_at                DateTime
+  payment_orders            payment_orders[]
+  payment_webhook_events    payment_webhook_events[]
+  billing_providers         billing_providers           @relation(fields: [provider_id], references: [id], onDelete: Cascade)
+  tenants                   tenants                     @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_user_subscriptions tenant_user_subscriptions[]
+
+  @@index([status])
+  @@index([tenant_id])
+  @@index([tenant_id, is_active])
+}
+
+model tenant_member_form_config {
+  id                           String                         @id
+  tenant_id                    String
+  mode                         String                         @default("OPTIONAL")
+  reprompt_after_hours         Int                            @default(24)
+  title                        String                         @default("Complete your profile")
+  description                  String?
+  fields                       Json                           @default("[]")
+  created_at                   DateTime                       @default(now())
+  updated_at                   DateTime
+  active                       Boolean                        @default(false)
+  name                         String                         @default("User data form")
+  sort_order                   Int                            @default(0)
+  tenants                      tenants                        @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_member_form_responses tenant_member_form_responses[]
+
+  @@index([tenant_id, active, sort_order])
+  @@index([tenant_id])
+}
+
+model tenant_member_form_responses {
+  id                        String                    @id
+  tenant_id                 String
+  member_id                 String
+  data                      Json                      @default("{}")
+  completed_at              DateTime                  @default(now())
+  created_at                DateTime                  @default(now())
+  updated_at                DateTime
+  form_id                   String
+  tenant_member_form_config tenant_member_form_config @relation(fields: [form_id], references: [id], onDelete: Cascade)
+  tenant_members            tenant_members            @relation(fields: [member_id], references: [id], onDelete: Cascade)
+  tenants                   tenants                   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, form_id, member_id])
+  @@index([tenant_id, form_id])
+  @@index([tenant_id])
+  @@index([tenant_id, member_id])
+}
+
+model tenant_member_sessions {
+  id             String         @id
+  tenant_id      String
+  member_id      String
+  session_token  String         @unique
+  device_info    String?
+  is_active      Boolean        @default(true)
+  created_at     DateTime       @default(now())
+  last_seen_at   DateTime       @default(now())
+  tenant_members tenant_members @relation(fields: [member_id], references: [id], onDelete: Cascade)
+  tenants        tenants        @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([session_token])
+  @@index([tenant_id, member_id])
+  @@index([tenant_id, member_id, is_active])
+}
+
+model tenant_members {
+  id                                                                                  String                             @id
+  tenant_id                                                                           String
+  joined_at                                                                           DateTime                           @default(now())
+  invited_by                                                                          String?
+  created_at                                                                          DateTime
+  updated_at                                                                          DateTime
+  avatar_url                                                                          String?
+  email                                                                               String?
+  email_verified                                                                      Boolean                            @default(false)
+  last_login_at                                                                       DateTime?
+  name                                                                                String
+  oauth_provider                                                                      String?
+  oauth_provider_id                                                                   String?
+  password_hash                                                                       String?
+  phone                                                                               String?
+  phone_verified                                                                      Boolean                            @default(false)
+  status                                                                              member_status                      @default(ACTIVE)
+  about                                                                               String?
+  gender                                                                              String?
+  profile_metadata                                                                    Json?
+  name_confirmed_at                                                                   DateTime?
+  preferred_locale                                                                    String?
+  assignment_submissions                                                              assignment_submissions[]
+  batch_enrollments                                                                   batch_enrollments[]
+  book_access                                                                         book_access[]
+  cart_items                                                                          cart_items[]
+  certificates                                                                        certificates[]
+  coupon_redemptions                                                                  coupon_redemptions[]
+  course_review_votes                                                                 course_review_votes[]
+  course_reviews                                                                      course_reviews[]
+  enrollments                                                                         enrollments[]
+  member_assignment_progress                                                          member_assignment_progress[]
+  member_book_highlights                                                              member_book_highlights[]
+  member_book_page_bookmarks                                                          member_book_page_bookmarks[]
+  member_book_progress                                                                member_book_progress[]
+  member_bookmarks                                                                    member_bookmarks[]
+  member_lecture_progress                                                             member_lecture_progress[]
+  member_lesson_progress                                                              member_lesson_progress[]
+  member_notifications                                                                member_notifications[]
+  member_payment_details                                                              member_payment_details[]
+  member_quiz_progress                                                                member_quiz_progress[]
+  payment_orders                                                                      payment_orders[]
+  quiz_attempts                                                                       quiz_attempts[]
+  tenant_member_form_responses                                                        tenant_member_form_responses[]
+  tenant_member_sessions                                                              tenant_member_sessions[]
+  tenants                                                                             tenants                            @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_user_subscriptions                                                           tenant_user_subscriptions[]
+  test_attempts                                                                       test_attempts[]
+  test_bookmarks                                                                      test_bookmarks[]
+  test_series_enrollments                                                             test_series_enrollments[]
+  testimonials                                                                        testimonials[]
+
+  @@unique([tenant_id, email])
+  @@unique([tenant_id, phone])
+  @@index([status])
+  @@index([tenant_id])
+  @@index([tenant_id, joined_at])
+  @@index([tenant_id, status, last_login_at])
+}
+
+model tenant_nav_items {
+  id            String   @id
+  tenant_id     String
+  item_type     String
+  feature_key   String?
+  label         String
+  href          String
+  icon          String?
+  sort_order    Int      @default(0)
+  visible       Boolean  @default(true)
+  is_external   Boolean  @default(false)
+  badge_text    String?
+  badge_variant String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now())
+  tenants       tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, feature_key])
+  @@index([tenant_id])
+}
+
+model tenant_nudge_dismissals {
+  id           String   @id
+  tenant_id    String
+  nudge_id     String
+  dismissed_at DateTime @default(now())
+  tenants      tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, nudge_id])
+  @@index([tenant_id])
+}
+
+model tenant_org_details {
+  id                  String   @id
+  tenant_id           String   @unique
+  logo_light_key      String?
+  logo_dark_key       String?
+  favicon_key         String?
+  tagline             String?  @db.VarChar(200)
+  description         String?
+  contact_email       String?
+  support_email       String?
+  phone_numbers       String[]
+  whatsapp_numbers    String[]
+  address             Json?
+  founder_name        String?
+  founder_title       String?
+  founder_bio         String?
+  founder_photo_key   String?
+  social_links        Json?
+  legal_entity_name   String?
+  registration_number String?
+  year_established    Int?
+  industry            String?
+  metadata            Json?
+  created_at          DateTime @default(now())
+  updated_at          DateTime
+  billing_address     Json?
+  billing_email       String?
+  billing_phone       String?
+  gstin               String?
+  hsn_sac_code        String?
+  pan_number          String?
+  tax_id              String?
+  tax_mode            tax_mode @default(INCLUSIVE)
+  tax_percentage      Decimal  @default(18) @db.Decimal(5, 2)
+  /// Play Store listing for this academy's app. Optional: shown in emails only when set.
+  android_app_url     String?
+  /// App Store listing for this academy's app. Optional: shown in emails only when set.
+  ios_app_url         String?
+  tenants             tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id])
+}
+
+model tenant_otp_codes {
+  id         String   @id
+  tenant_id  String
+  identifier String
+  code       String
+  channel    String
+  expires_at DateTime
+  verified   Boolean  @default(false)
+  attempts   Int      @default(0)
+  created_at DateTime @default(now())
+
+  @@index([expires_at])
+  @@index([tenant_id, identifier, channel])
+}
+
+model tenant_page_revisions {
+  id               String            @id
+  tenant_id        String
+  page_id          String
+  custom_html      String
+  custom_code_kind custom_code_kind?
+  label            String?
+  created_by       String?
+  created_at       DateTime          @default(now())
+  tenant_pages     tenant_pages      @relation(fields: [page_id], references: [id], onDelete: Cascade)
+  tenants          tenants           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([page_id, created_at])
+  @@index([tenant_id, page_id])
+}
+
+model tenant_pages {
+  id                     String                  @id
+  tenant_id              String
+  slug                   String
+  title                  String
+  sections               Json
+  theme                  Json
+  seo                    Json
+  is_published           Boolean                 @default(false)
+  published_at           DateTime?
+  created_by             String?
+  updated_by             String?
+  created_at             DateTime                @default(now())
+  updated_at             DateTime
+  custom_assets          Json?
+  custom_code_kind       custom_code_kind?
+  custom_html            String?
+  custom_html_draft      String?
+  moderation_status      page_moderation_status  @default(ACTIVE)
+  render_mode            page_render_mode        @default(SECTIONS)
+  custom_code_kind_draft custom_code_kind?
+  tenant_page_revisions  tenant_page_revisions[]
+  tenants                tenants                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, slug])
+  @@index([tenant_id])
+  @@index([tenant_id, is_published])
+}
+
+model tenant_password_resets {
+  id         String   @id
+  tenant_id  String?
+  email      String
+  token      String   @unique
+  expires_at DateTime
+  used       Boolean  @default(false)
+  created_at DateTime @default(now())
+  tenants    tenants? @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, email])
+  @@index([tenant_id])
+  @@index([token])
+}
+
+model tenant_permissions {
+  id                      String                    @id
+  code                    String                    @unique
+  name                    String
+  description             String?
+  category                String?
+  created_at              DateTime
+  tenant_role_permissions tenant_role_permissions[]
+
+  @@index([category])
+  @@index([code])
+}
+
+model tenant_role_permissions {
+  role_id            String
+  permission_id      String
+  created_at         DateTime           @default(now())
+  tenant_permissions tenant_permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+  tenant_roles       tenant_roles       @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@id([role_id, permission_id])
+  @@index([permission_id])
+  @@index([role_id])
+}
+
+model tenant_roles {
+  id                      String                    @id
+  code                    String
+  name                    String
+  description             String?
+  is_system               Boolean                   @default(false)
+  created_at              DateTime
+  updated_at              DateTime
+  tenant_id               String?
+  tenant_role_permissions tenant_role_permissions[]
+  tenants                 tenants?                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_user_roles       tenant_user_roles[]
+
+  @@unique([tenant_id, code])
+  @@index([code])
+  @@index([tenant_id])
+}
+
+model tenant_staff_memberships {
+  id                String                  @id
+  tenant_id         String
+  user_id           String
+  status            staff_membership_status @default(ACTIVE)
+  invited_by        String?
+  invited_at        DateTime?
+  joined_at         DateTime?
+  created_at        DateTime
+  updated_at        DateTime
+  tenants           tenants                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_users      tenant_users            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  tenant_user_roles tenant_user_roles[]
+
+  @@unique([tenant_id, user_id])
+  @@index([status])
+  @@index([tenant_id])
+  @@index([user_id])
+}
+
+model tenant_subscription_events {
+  id                        String                    @id @db.VarChar(26)
+  tenant_id                 String                    @db.VarChar(26)
+  subscription_id           String                    @db.VarChar(26)
+  event_type                String                    @db.VarChar(100)
+  gateway_event_id          String?                   @db.VarChar(255)
+  previous_status           String?                   @db.VarChar(50)
+  new_status                String                    @db.VarChar(50)
+  gateway_payment_id        String?                   @db.VarChar(255)
+  amount                    Decimal?                  @db.Decimal(16, 2)
+  metadata                  Json?
+  created_at                DateTime                  @default(now())
+  tenant_user_subscriptions tenant_user_subscriptions @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
+  tenants                   tenants                   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, gateway_event_id])
+  @@index([tenant_id, subscription_id])
+}
+
+model tenant_subscription_plans {
+  id                        String                      @id @db.VarChar(26)
+  tenant_id                 String                      @db.VarChar(26)
+  name                      String                      @db.VarChar(255)
+  description               String?
+  billing_cycle             billing_cycle
+  currency                  String                      @db.VarChar(10)
+  amount                    Decimal                     @db.Decimal(16, 2)
+  amount_in_smallest        Int
+  gateway_plan_id           String?                     @db.VarChar(255)
+  gateway_provider          String                      @default("RAZORPAY") @db.VarChar(50)
+  is_active                 Boolean                     @default(true)
+  trial_days                Int                         @default(0)
+  features_summary          String?
+  metadata                  Json?
+  created_at                DateTime                    @default(now())
+  updated_at                DateTime
+  tenants                   tenants                     @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_user_subscriptions tenant_user_subscriptions[]
+
+  @@unique([tenant_id, gateway_plan_id])
+  @@index([tenant_id, is_active])
+}
+
+model tenant_subscription_settings {
+  id                           String   @id @db.VarChar(26)
+  tenant_id                    String   @unique @db.VarChar(26)
+  is_enabled                   Boolean  @default(false)
+  grace_period_days            Int      @default(0)
+  reminder_days_before         Json?
+  dunning_email_interval_hours Int      @default(48)
+  created_at                   DateTime @default(now())
+  updated_at                   DateTime
+  subscription_name            String?  @db.VarChar(100)
+  page_config                  Json?
+  tenants                      tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+}
+
+model tenant_usage_counters {
+  id                 String    @id
+  tenant_id          String
+  product_code       String
+  scope_type         String    @default("TENANT")
+  scope_id           String    @default("__TENANT__")
+  window_type        String    @default("LIFETIME")
+  window_start       DateTime?
+  current_value      Int       @default(0)
+  last_reconciled_at DateTime?
+  reconciled_value   Int?
+  created_at         DateTime  @default(now())
+  updated_at         DateTime
+  tenants            tenants   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, product_code, scope_type, scope_id, window_type, window_start])
+  @@index([tenant_id, product_code])
+}
+
+model tenant_usage_events {
+  id              String   @id
+  tenant_id       String
+  product_code    String
+  scope_type      String   @default("TENANT")
+  scope_id        String   @default("__TENANT__")
+  event_type      String
+  delta           Int
+  resulting_value Int?
+  resource_type   String?
+  resource_id     String?
+  idempotency_key String?  @unique
+  reason          String?
+  actor_type      String   @default("SYSTEM")
+  actor_id        String?
+  metadata        Json?
+  created_at      DateTime @default(now())
+
+  @@index([resource_type, resource_id])
+  @@index([tenant_id, created_at])
+  @@index([tenant_id, product_code])
+}
+
+model tenant_user_roles {
+  role_id                  String
+  assigned_at              DateTime                 @default(now())
+  assigned_by              String?
+  membership_id            String
+  tenant_staff_memberships tenant_staff_memberships @relation(fields: [membership_id], references: [id], onDelete: Cascade)
+  tenant_roles             tenant_roles             @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@id([membership_id, role_id])
+  @@index([membership_id])
+  @@index([role_id])
+}
+
+model tenant_user_subscriptions {
+  id                         String                       @id @db.VarChar(26)
+  tenant_id                  String                       @db.VarChar(26)
+  member_id                  String                       @db.VarChar(26)
+  plan_id                    String                       @db.VarChar(26)
+  gateway_connection_id      String                       @db.VarChar(26)
+  gateway_subscription_id    String?                      @db.VarChar(255)
+  gateway_customer_id        String?                      @db.VarChar(255)
+  gateway_provider           String                       @default("RAZORPAY") @db.VarChar(50)
+  plan_name_snapshot         String                       @db.VarChar(255)
+  billing_cycle_snapshot     String                       @db.VarChar(20)
+  amount_snapshot            Decimal                      @db.Decimal(16, 2)
+  currency_snapshot          String                       @db.VarChar(10)
+  status                     tenant_subscription_status   @default(CREATED)
+  current_period_start       DateTime?
+  current_period_end         DateTime?
+  trial_ends_at              DateTime?
+  grace_period_ends_at       DateTime?
+  cancelled_at               DateTime?
+  cancel_at_period_end       Boolean                      @default(false)
+  ended_at                   DateTime?
+  paused_at                  DateTime?
+  last_payment_at            DateTime?
+  last_payment_amount        Decimal?                     @db.Decimal(16, 2)
+  next_charge_at             DateTime?
+  payment_failure_count      Int                          @default(0)
+  last_dunning_email_at      DateTime?
+  short_url                  String?                      @db.VarChar(500)
+  metadata                   Json?
+  created_at                 DateTime                     @default(now())
+  updated_at                 DateTime
+  tenant_subscription_events tenant_subscription_events[]
+  tenant_gateway_connections tenant_gateway_connections   @relation(fields: [gateway_connection_id], references: [id], onDelete: Cascade)
+  tenant_members             tenant_members               @relation(fields: [member_id], references: [id], onDelete: Cascade)
+  tenant_subscription_plans  tenant_subscription_plans    @relation(fields: [plan_id], references: [id], onDelete: Cascade)
+  tenants                    tenants                      @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, gateway_subscription_id])
+  @@index([status, grace_period_ends_at])
+  @@index([status, next_charge_at])
+  @@index([tenant_id, member_id])
+  @@index([tenant_id, status])
+}
+
+model tenant_users {
+  id                        String                      @id
+  email                     String                      @unique
+  password_hash             String?
+  name                      String
+  avatar_url                String?
+  oauth_provider            String?
+  oauth_provider_id         String?
+  status                    tenant_user_status          @default(ACTIVE)
+  email_verified            Boolean                     @default(false)
+  last_login_at             DateTime?
+  created_at                DateTime
+  updated_at                DateTime
+  designation               String?
+  last_login_ip             String?
+  login_count               Int                         @default(0)
+  phone                     String?                     @unique
+  phone_verified            Boolean                     @default(false)
+  profile_completed_at      DateTime?
+  signup_city               String?
+  signup_country            String?
+  signup_ip                 String?
+  signup_referrer           String?
+  signup_user_agent         String?
+  signup_utm                Json?
+  timezone                  String?
+  creator_intent_profile    Json?
+  signup_quiz_answers       Json?
+  preferred_locale          String?                     @db.VarChar(10)
+  instructors               instructors[]
+  tenant_admin_otp_codes    tenant_admin_otp_codes[]
+  tenant_staff_memberships  tenant_staff_memberships[]
+  tenants                   tenants[]
+
+  @@unique([oauth_provider, oauth_provider_id])
+  @@index([email])
+  @@index([phone_verified])
+  @@index([status])
+}
+
+model tenant_watch_time_daily {
+  tenant_id              String
+  date                   DateTime
+  course_id              String
+  lecture_id             String
+  total_seconds          BigInt   @default(0)
+  sessions_count         Int      @default(0)
+  distinct_members_count Int      @default(0)
+  avg_completion_pct     Float    @default(0)
+  updated_at             DateTime @default(now())
+
+  @@id([tenant_id, date, course_id, lecture_id])
+  @@index([tenant_id, course_id, date])
+  @@index([tenant_id, date])
+}
+
+model tenants {
+  id                                       String                            @id
+  name                                     String
+  slug                                     String                            @unique
+  custom_domain                            String?                           @unique
+  owner_user_id                            String
+  status                                   tenant_status                     @default(ACTIVE)
+  created_at                               DateTime                          @default(now())
+  updated_at                               DateTime
+  layout                                   Json?
+  certificate_template                     String?
+  certificate_template_published           Boolean                           @default(false)
+  certificate_logo                         String?
+  onboarding_checklist_dismissed_at        DateTime?
+  email_marketing_blocked_reason           String?                           @db.VarChar(512)
+  email_sending_status                     email_sending_tenant_status       @default(ACTIVE)
+  email_sending_status_changed_at          DateTime?
+  email_tps_override                       Decimal?                          @db.Decimal(6, 2)
+  access_managed_enabled                   Boolean                           @default(false)
+  access_managed_enabled_at                DateTime?
+  access_managed_enabled_by_user_id        String?
+  certificate_tab_enabled                  Boolean                           @default(true)
+  enrolled_courses_only_enabled            Boolean                           @default(false)
+  enrolled_courses_only_enabled_at         DateTime?
+  enrolled_courses_only_enabled_by_user_id String?
+  sequential_courses_enabled               Boolean                           @default(false)
+  sequential_courses_enabled_at            DateTime?
+  sequential_courses_enabled_by_user_id    String?
+  ordered_products_enabled                 Boolean                           @default(false)
+  ordered_products_enabled_at              DateTime?
+  ordered_products_enabled_by_user_id      String?
+  default_locale                           String                            @default("en")
+  multi_language_enabled                   Boolean                           @default(false)
+  batch_enrollments                        batch_enrollments[]
+  batch_leaderboard_snapshots              batch_leaderboard_snapshots[]
+  batches                                  batches[]
+  book_access                              book_access[]
+  books                                    books[]
+  bulk_certificates                        bulk_certificates[]
+  bundles                                  bundles[]
+  cart_items                               cart_items[]
+  categories                               categories[]
+  certificate_batches                      certificate_batches[]
+  certificates                             certificates[]
+  content_prices                           content_prices[]
+  content_product_links                    content_product_links[]
+  content_translations                     content_translations[]
+  coupon_redemptions                       coupon_redemptions[]
+  coupons                                  coupons[]
+  course_reviews                           course_reviews[]
+  courses                                  courses[]
+  enrollments                              enrollments[]
+  entitlements                             entitlements[]
+  instructors                              instructors[]
+  invoices                                 invoices[]
+  member_bookmarks                         member_bookmarks[]
+  member_notifications                     member_notifications[]
+  member_payment_details                   member_payment_details[]
+  payment_orders                           payment_orders[]
+  pending_subscription_checkouts           pending_subscription_checkouts[]
+  subscription_events                      subscription_events[]
+  subscriptions                            subscriptions[]
+  tenant_addons                            tenant_addons[]
+  tenant_applications                      tenant_applications[]
+  tenant_auth_config                       tenant_auth_config?
+  tenant_bulk_imports                      tenant_bulk_imports[]
+  tenant_currencies                        tenant_currencies[]
+  tenant_domains                           tenant_domains[]
+  tenant_email_messages                    tenant_email_messages[]
+  tenant_email_reputation_events           tenant_email_reputation_events[]
+  tenant_email_sender_identities           tenant_email_sender_identities[]
+  tenant_email_sending_domains             tenant_email_sending_domains[]
+  tenant_email_suppressions                tenant_email_suppressions[]
+  tenant_gateway_connections               tenant_gateway_connections[]
+  tenant_locales                           tenant_locales[]
+  tenant_member_form_config                tenant_member_form_config[]
+  tenant_member_form_responses             tenant_member_form_responses[]
+  tenant_member_sessions                   tenant_member_sessions[]
+  tenant_members                           tenant_members[]
+  tenant_nav_items                         tenant_nav_items[]
+  tenant_nudge_dismissals                  tenant_nudge_dismissals[]
+  tenant_org_details                       tenant_org_details?
+  tenant_page_revisions                    tenant_page_revisions[]
+  tenant_pages                             tenant_pages[]
+  tenant_password_resets                   tenant_password_resets[]
+  tenant_roles                             tenant_roles[]
+  tenant_staff_memberships                 tenant_staff_memberships[]
+  tenant_subscription_events               tenant_subscription_events[]
+  tenant_subscription_plans                tenant_subscription_plans[]
+  tenant_subscription_settings             tenant_subscription_settings?
+  tenant_usage_counters                    tenant_usage_counters[]
+  tenant_user_subscriptions                tenant_user_subscriptions[]
+  tenant_users                             tenant_users                      @relation(fields: [owner_user_id], references: [id])
+  test_attempts                            test_attempts[]
+  test_bookmarks                           test_bookmarks[]
+  test_coupons                             test_coupons[]
+  test_exam_rank_curves                    test_exam_rank_curves[]
+  test_question_banks                      test_question_banks[]
+  test_series                              test_series[]
+  test_series_enrollments                  test_series_enrollments[]
+  testimonials                             testimonials[]
+  tests                                    tests[]
+
+  @@index([owner_user_id])
+}
+
+model test_attempt_answers {
+  id                String                     @id
+  tenant_id         String
+  attempt_id        String
+  question_id       String
+  answer            Json?
+  time_spent_sec    Int                        @default(0)
+  marked_for_review Boolean                    @default(false)
+  is_correct        Boolean?
+  marks_awarded     Decimal?                   @db.Decimal(6, 2)
+  created_at        DateTime                   @default(now())
+  updated_at        DateTime
+  graded_at         DateTime?
+  graded_by         String?
+  grader_remarks    String?
+  grading_status    test_answer_grading_status @default(AUTO_GRADED)
+  test_attempts     test_attempts              @relation(fields: [attempt_id], references: [id], onDelete: Cascade)
+  test_questions    test_questions             @relation(fields: [question_id], references: [id], onDelete: Cascade)
+
+  @@unique([attempt_id, question_id])
+  @@index([tenant_id, attempt_id])
+  @@index([tenant_id, grading_status])
+}
+
+model test_attempt_modules {
+  id                String                     @id
+  tenant_id         String
+  attempt_id        String
+  module_id         String
+  section_id        String
+  stage_no          Int
+  variant           String
+  order_index       Int
+  status            test_attempt_module_status @default(PENDING)
+  question_ids      String[]                   @default([])
+  pretest_ids       String[]                   @default([])
+  time_limit_sec    Int
+  started_at        DateTime?
+  completed_at      DateTime?
+  raw_correct       Int?
+  raw_score         Decimal?                   @db.Decimal(8, 2)
+  routed_to_variant String?
+  auto_completed    Boolean                    @default(false)
+  created_at        DateTime                   @default(now())
+  updated_at        DateTime
+  test_attempts     test_attempts              @relation(fields: [attempt_id], references: [id], onDelete: Cascade)
+  test_modules      test_modules               @relation(fields: [module_id], references: [id], onDelete: Cascade)
+
+  @@unique([attempt_id, module_id])
+  @@index([tenant_id, attempt_id, order_index])
+}
+
+model test_attempts {
+  id                   String                      @id
+  tenant_id            String
+  learner_id           String
+  test_id              String
+  test_series_id       String
+  started_at           DateTime                    @default(now())
+  submitted_at         DateTime?
+  time_remaining_sec   Int?
+  status               test_attempt_status         @default(IN_PROGRESS)
+  score                Decimal?                    @db.Decimal(8, 2)
+  percentage           Decimal?                    @db.Decimal(5, 2)
+  percentile           Decimal?                    @db.Decimal(5, 2)
+  rank                 Int?
+  predicted_rank_min   Int?
+  predicted_rank_max   Int?
+  analytics            Json?
+  created_at           DateTime                    @default(now())
+  updated_at           DateTime
+  question_ids         String[]                    @default([])
+  scaled_score         Decimal?                    @db.Decimal(8, 2)
+  scaled_score_max     Int?
+  proctoring_flags     Json?
+  tab_switch_count     Int                         @default(0)
+  break_ends_at        DateTime?                   @db.Timestamptz(6)
+  grading_status       test_attempt_grading_status @default(NOT_REQUIRED)
+  total_marks          Decimal?                    @db.Decimal(8, 2)
+  test_attempt_answers test_attempt_answers[]
+  test_attempt_modules test_attempt_modules[]
+  tenant_members       tenant_members              @relation(fields: [learner_id], references: [id], onDelete: Cascade)
+  tenants              tenants                     @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tests                tests                       @relation(fields: [test_id], references: [id], onDelete: Cascade)
+  test_series          test_series                 @relation(fields: [test_series_id], references: [id], onDelete: Cascade)
+  test_bookmarks       test_bookmarks[]
+
+  @@index([tenant_id, grading_status])
+  @@index([tenant_id, learner_id])
+  @@index([tenant_id, test_id, score])
+  @@index([tenant_id, test_id, status])
+  @@index([tenant_id, test_series_id])
+}
+
+model test_bookmarks {
+  id             String         @id
+  tenant_id      String
+  learner_id     String
+  question_id    String
+  attempt_id     String?
+  note           String?
+  created_at     DateTime       @default(now())
+  test_attempts  test_attempts? @relation(fields: [attempt_id], references: [id])
+  tenant_members tenant_members @relation(fields: [learner_id], references: [id], onDelete: Cascade)
+  test_questions test_questions @relation(fields: [question_id], references: [id], onDelete: Cascade)
+  tenants        tenants        @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, learner_id, question_id])
+  @@index([tenant_id, learner_id])
+}
+
+model test_certificates {
+  id                 String    @id
+  tenant_id          String
+  tenant_member_id   String
+  test_id            String?
+  test_series_id     String?
+  attempt_id         String?
+  certificate_number String
+  template_id        String?
+  status             String    @default("ISSUED")
+  issued_at          DateTime  @default(now())
+  revoked_at         DateTime?
+  created_at         DateTime
+  updated_at         DateTime
+  template_snapshot  Json?
+
+  @@unique([tenant_id, certificate_number])
+  @@index([tenant_id, status])
+  @@index([tenant_id, tenant_member_id])
+  @@index([tenant_id, test_id])
+}
+
+model test_coupons {
+  id             String               @id
+  tenant_id      String
+  test_series_id String?
+  code           String
+  type           coupon_discount_type
+  value          Decimal              @db.Decimal(10, 2)
+  max_uses       Int?
+  used_count     Int                  @default(0)
+  expires_at     DateTime?
+  created_at     DateTime             @default(now())
+  updated_at     DateTime
+  tenants        tenants              @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  test_series    test_series?         @relation(fields: [test_series_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, code])
+  @@index([tenant_id, test_series_id])
+}
+
+model test_exam_rank_curves {
+  id               String   @id
+  tenant_id        String
+  exam_name        String
+  year             Int
+  total_candidates Int
+  curve            Json
+  created_at       DateTime @default(now())
+  updated_at       DateTime
+  tenants          tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tests            tests[]
+
+  @@index([tenant_id, exam_name])
+  @@index([tenant_id])
+}
+
+model test_module_questions {
+  id             String         @id
+  tenant_id      String
+  test_id        String
+  module_id      String
+  question_id    String
+  is_pretest     Boolean        @default(false)
+  order_index    Int            @default(0)
+  created_at     DateTime       @default(now())
+  test_modules   test_modules   @relation(fields: [module_id], references: [id], onDelete: Cascade)
+  test_questions test_questions @relation(fields: [question_id], references: [id], onDelete: Cascade)
+  tests          tests          @relation(fields: [test_id], references: [id], onDelete: Cascade)
+
+  @@unique([module_id, question_id])
+  @@index([tenant_id, module_id, order_index])
+  @@index([tenant_id, test_id])
+}
+
+model test_module_score_scales {
+  id            String        @id
+  tenant_id     String
+  test_id       String
+  section_id    String
+  path_key      String
+  scale         Json
+  scale_max     Int
+  created_at    DateTime      @default(now())
+  updated_at    DateTime
+  test_sections test_sections @relation(fields: [section_id], references: [id], onDelete: Cascade)
+  tests         tests         @relation(fields: [test_id], references: [id], onDelete: Cascade)
+
+  @@unique([section_id, path_key])
+  @@index([tenant_id, test_id])
+}
+
+model test_modules {
+  id                    String                  @id
+  tenant_id             String
+  test_id               String
+  section_id            String
+  stage_no              Int
+  variant               String
+  difficulty_rank       Int                     @default(0)
+  question_count        Int
+  pretest_count         Int                     @default(0)
+  time_limit_min        Int
+  routing_rules         Json?
+  created_at            DateTime                @default(now())
+  updated_at            DateTime
+  test_attempt_modules  test_attempt_modules[]
+  test_module_questions test_module_questions[]
+  test_sections         test_sections           @relation(fields: [section_id], references: [id], onDelete: Cascade)
+  tests                 tests                   @relation(fields: [test_id], references: [id], onDelete: Cascade)
+
+  @@unique([section_id, stage_no, variant])
+  @@index([tenant_id, section_id])
+  @@index([tenant_id, test_id])
+}
+
+model test_norm_tables {
+  id         String   @id
+  tenant_id  String
+  test_id    String   @unique
+  points     Json
+  max_score  Int
+  created_at DateTime @default(now())
+  updated_at DateTime
+  tests      tests    @relation(fields: [test_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, test_id])
+}
+
+model test_question_banks {
+  id             String           @id
+  tenant_id      String
+  name           String
+  description    String?
+  created_by     String?
+  created_at     DateTime
+  updated_at     DateTime
+  tenants        tenants          @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  test_questions test_questions[]
+
+  @@index([tenant_id, created_at])
+  @@index([tenant_id])
+}
+
+model test_questions {
+  id                                                                      String                    @id
+  tenant_id                                                               String
+  question_bank_id                                                        String
+  type                                                                    test_question_type
+  stem                                                                    Json
+  options                                                                 Json?
+  correct_answer                                                          Json?
+  explanation                                                             String?
+  marks                                                                   Decimal                   @default(4) @db.Decimal(6, 2)
+  negative_marks                                                          Decimal                   @default(1) @db.Decimal(6, 2)
+  difficulty                                                              test_question_difficulty  @default(MEDIUM)
+  subject                                                                 String?
+  chapter                                                                 String?
+  topic                                                                   String?
+  source                                                                  String?
+  status                                                                  test_question_status      @default(DRAFT)
+  created_via                                                             test_question_created_via @default(MANUAL)
+  ai_metadata                                                             Json?
+  created_by                                                              String?
+  created_at                                                              DateTime
+  updated_at                                                              DateTime
+  chapter_node_id                                                         String?
+  subject_node_id                                                         String?
+  topic_node_id                                                           String?
+  test_attempt_answers                                                    test_attempt_answers[]
+  test_bookmarks                                                          test_bookmarks[]
+  test_module_questions                                                   test_module_questions[]
+  test_taxonomy_nodes_test_questions_chapter_node_idTotest_taxonomy_nodes test_taxonomy_nodes?      @relation("test_questions_chapter_node_idTotest_taxonomy_nodes", fields: [chapter_node_id], references: [id])
+  test_question_banks                                                     test_question_banks       @relation(fields: [question_bank_id], references: [id], onDelete: Cascade)
+  test_taxonomy_nodes_test_questions_subject_node_idTotest_taxonomy_nodes test_taxonomy_nodes?      @relation("test_questions_subject_node_idTotest_taxonomy_nodes", fields: [subject_node_id], references: [id])
+  test_taxonomy_nodes_test_questions_topic_node_idTotest_taxonomy_nodes   test_taxonomy_nodes?      @relation("test_questions_topic_node_idTotest_taxonomy_nodes", fields: [topic_node_id], references: [id])
+  test_section_questions                                                  test_section_questions[]
+
+  @@index([tenant_id, chapter_node_id])
+  @@index([tenant_id, difficulty])
+  @@index([tenant_id, question_bank_id, created_at])
+  @@index([tenant_id, status])
+  @@index([tenant_id, subject, chapter, topic])
+  @@index([tenant_id, subject_node_id])
+  @@index([tenant_id, topic_node_id])
+}
+
+model test_scholarship_awards {
+  id             String    @id
+  tenant_id      String
+  scholarship_id String
+  member_id      String
+  attempt_id     String?
+  tier_label     String?
+  amount         Decimal?  @db.Decimal(12, 2)
+  currency       String?
+  score          Decimal?  @db.Decimal(8, 2)
+  status         String    @default("PENDING")
+  flagged_at     DateTime  @default(now())
+  decided_by     String?
+  decided_at     DateTime?
+  created_at     DateTime
+  updated_at     DateTime
+
+  @@unique([scholarship_id, member_id])
+  @@index([tenant_id, scholarship_id])
+  @@index([tenant_id, status])
+}
+
+model test_scholarships {
+  id             String   @id
+  tenant_id      String
+  test_id        String?
+  test_series_id String?
+  name           String
+  description    String?
+  basis          String   @default("PERCENT")
+  tiers          Json
+  max_awardees   Int?
+  status         String   @default("ACTIVE")
+  created_by     String?
+  created_at     DateTime
+  updated_at     DateTime
+
+  @@index([tenant_id, status])
+  @@index([tenant_id, test_id])
+  @@index([tenant_id, test_series_id])
+}
+
+model test_section_questions {
+  id             String         @id
+  tenant_id      String
+  test_id        String
+  section_id     String
+  question_id    String
+  order_index    Int            @default(0)
+  marks_override Decimal?       @db.Decimal(6, 2)
+  created_at     DateTime       @default(now())
+  test_questions test_questions @relation(fields: [question_id], references: [id], onDelete: Cascade)
+  test_sections  test_sections  @relation(fields: [section_id], references: [id], onDelete: Cascade)
+  tests          tests          @relation(fields: [test_id], references: [id], onDelete: Cascade)
+
+  @@unique([section_id, question_id])
+  @@index([tenant_id, section_id, order_index])
+  @@index([tenant_id, test_id])
+}
+
+model test_sections {
+  id                       String                     @id
+  tenant_id                String
+  test_id                  String
+  name                     String
+  instructions             String?
+  time_limit_min           Int?
+  order_index              Int                        @default(0)
+  marking_scheme           Json?
+  created_at               DateTime
+  updated_at               DateTime
+  break_after_sec          Int?
+  question_selection       Json?
+  question_bank_id         String?
+  random_question_count    Int?
+  test_module_score_scales test_module_score_scales[]
+  test_modules             test_modules[]
+  test_section_questions   test_section_questions[]
+  tests                    tests                      @relation(fields: [test_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, test_id])
+  @@index([tenant_id, test_id, order_index])
+}
+
+model test_series {
+  id                      String                    @id
+  tenant_id               String
+  title                   String
+  slug                    String
+  description             String?
+  cover_image_key         String?
+  category                String?
+  pricing_type            test_series_pricing_type  @default(FREE)
+  price_inr               Decimal?                  @db.Decimal(10, 2)
+  price_usd               Decimal?                  @db.Decimal(10, 2)
+  currency                String?                   @default("INR")
+  validity_days           Int?
+  end_date                DateTime?
+  visibility              test_series_visibility    @default(PUBLIC)
+  access_mode             test_series_access_mode   @default(OPEN)
+  status                  test_status               @default(DRAFT)
+  created_by              String?
+  created_at              DateTime
+  updated_at              DateTime
+  discount_inr            Decimal?                  @db.Decimal(10, 2)
+  discount_usd            Decimal?                  @db.Decimal(10, 2)
+  sort_order              Int                       @default(0)
+  bundle_items            bundle_items[]
+  coupon_applicable_items coupon_applicable_items[]
+  test_attempts           test_attempts[]
+  test_coupons            test_coupons[]
+  tenants                 tenants                   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  test_series_enrollments test_series_enrollments[]
+  test_series_tests       test_series_tests[]
+
+  @@unique([tenant_id, slug])
+  @@index([tenant_id, pricing_type])
+  @@index([tenant_id, status])
+  @@index([tenant_id, status, sort_order, created_at])
+  @@index([tenant_id, visibility])
+}
+
+model test_series_enrollments {
+  id               String                        @id
+  tenant_id        String
+  tenant_member_id String
+  test_series_id   String
+  status           test_series_enrollment_status @default(ACTIVE)
+  source           test_series_enrollment_source @default(PURCHASED)
+  source_coupon_id String?
+  enrolled_at      DateTime                      @default(now())
+  valid_till       DateTime?
+  payment_id       String?
+  amount_paid      Decimal?                      @db.Decimal(10, 2)
+  created_at       DateTime                      @default(now())
+  updated_at       DateTime
+  tenants          tenants                       @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_members   tenant_members                @relation(fields: [tenant_member_id], references: [id], onDelete: Cascade)
+  test_series      test_series                   @relation(fields: [test_series_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, tenant_member_id, test_series_id])
+  @@index([tenant_id, tenant_member_id])
+  @@index([tenant_id, test_series_id])
+}
+
+model test_series_tests {
+  id              String      @id
+  tenant_id       String
+  test_series_id  String
+  test_id         String
+  order_index     Int         @default(0)
+  is_free_preview Boolean     @default(false)
+  created_at      DateTime    @default(now())
+  tests           tests       @relation(fields: [test_id], references: [id], onDelete: Cascade)
+  test_series     test_series @relation(fields: [test_series_id], references: [id], onDelete: Cascade)
+
+  @@unique([test_series_id, test_id])
+  @@index([tenant_id, test_series_id])
+  @@index([tenant_id, test_series_id, order_index])
+}
+
+model test_taxonomy_nodes {
+  id                                                                 String                @id
+  tenant_id                                                          String
+  kind                                                               test_taxonomy_kind
+  parent_id                                                          String?
+  name                                                               String
+  order_index                                                        Int                   @default(0)
+  created_at                                                         DateTime              @default(now())
+  updated_at                                                         DateTime
+  test_questions_test_questions_chapter_node_idTotest_taxonomy_nodes test_questions[]      @relation("test_questions_chapter_node_idTotest_taxonomy_nodes")
+  test_questions_test_questions_subject_node_idTotest_taxonomy_nodes test_questions[]      @relation("test_questions_subject_node_idTotest_taxonomy_nodes")
+  test_questions_test_questions_topic_node_idTotest_taxonomy_nodes   test_questions[]      @relation("test_questions_topic_node_idTotest_taxonomy_nodes")
+  test_taxonomy_nodes                                                test_taxonomy_nodes?  @relation("test_taxonomy_nodesTotest_taxonomy_nodes", fields: [parent_id], references: [id], onDelete: Cascade)
+  other_test_taxonomy_nodes                                          test_taxonomy_nodes[] @relation("test_taxonomy_nodesTotest_taxonomy_nodes")
+
+  @@index([tenant_id, kind])
+  @@index([tenant_id, parent_id])
+}
+
+model testimonials {
+  id               String             @id
+  tenant_id        String
+  tenant_member_id String?
+  name             String
+  text             String?
+  image_url        String?
+  social_links     Json?
+  rating           Int?
+  status           testimonial_status @default(PENDING)
+  created_at       DateTime           @default(now())
+  updated_at       DateTime
+  tenants          tenants            @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant_members   tenant_members?    @relation(fields: [tenant_member_id], references: [id])
+
+  @@index([tenant_id])
+  @@index([tenant_id, status])
+}
+
+model tests {
+  id                        String                     @id
+  tenant_id                 String
+  name                      String
+  description               String?
+  cover_image_key           String?
+  duration_min              Int
+  total_marks               Decimal                    @default(0) @db.Decimal(8, 2)
+  status                    test_status                @default(DRAFT)
+  shuffle_questions         Boolean                    @default(false)
+  shuffle_options           Boolean                    @default(false)
+  show_solutions            test_show_solutions        @default(IMMEDIATE)
+  allow_reattempt           Boolean                    @default(false)
+  pass_criteria_pct         Decimal?                   @db.Decimal(5, 2)
+  target_exam               String?
+  target_rank_curve_id      String?
+  created_by                String?
+  created_at                DateTime
+  updated_at                DateTime
+  random_question_count     Int?
+  mode                      test_mode                  @default(STANDARD)
+  max_attempts              Int?
+  calculator_mode           String                     @default("NONE")
+  proctor_camera            Boolean                    @default(false)
+  proctor_max_tab_switches  Int?
+  proctoring_enabled        Boolean                    @default(false)
+  proctor_mic               Boolean                    @default(false)
+  proctor_fullscreen        Boolean                    @default(false)
+  proctor_block_copy_paste  Boolean                    @default(false)
+  proctor_action            String                     @default("WARN")
+  available_from            DateTime?
+  available_until           DateTime?
+  certificate_enabled       Boolean                    @default(false)
+  certificate_template_id   String?
+  certificate_min_score_pct Decimal?                   @db.Decimal(5, 2)
+  test_attempts             test_attempts[]
+  test_module_questions     test_module_questions[]
+  test_module_score_scales  test_module_score_scales[]
+  test_modules              test_modules[]
+  test_norm_tables          test_norm_tables?
+  test_section_questions    test_section_questions[]
+  test_sections             test_sections[]
+  test_series_tests         test_series_tests[]
+  test_exam_rank_curves     test_exam_rank_curves?     @relation(fields: [target_rank_curve_id], references: [id])
+  tenants                   tenants                    @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, created_at])
+  @@index([tenant_id])
+  @@index([tenant_id, status])
+}
+
+model usage_events {
+  id              String           @id
+  tenant_id       String
+  feature_key     String
+  product_code    String
+  event_type      usage_event_type
+  amount          Int              @default(1)
+  resource_type   String?
+  resource_id     String?
+  idempotency_key String?          @unique
+  created_at      DateTime         @default(now())
+
+  @@index([created_at])
+  @@index([tenant_id, feature_key])
+  @@index([tenant_id, product_code])
+}
+
+model watch_time_rollup_state {
+  tenant_id      String   @id
+  last_rollup_at DateTime @default(now())
+  updated_at     DateTime @default(now())
+}
+
+model content_translations {
+  id          String                   @id
+  tenant_id   String
+  entity_type translatable_entity_type
+  entity_id   String
+  locale      String
+  field       String
+  value       String
+  is_machine  Boolean                  @default(false)
+  created_at  DateTime                 @default(now())
+  updated_at  DateTime
+  tenants     tenants                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, entity_type, entity_id, locale, field])
+  @@index([tenant_id, entity_type, entity_id, locale])
+}
+
+model tenant_locales {
+  id           String   @id
+  tenant_id    String
+  locale       String
+  is_published Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime
+  tenants      tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, locale])
+  @@index([tenant_id, is_published])
+}
+
+enum addon_subscription_status {
+  PENDING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum admin_user_status {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum assignment_content_type {
+  TEXT
+  PDF
+}
+
+enum assignment_scope {
+  COURSE
+  SECTION
+  LESSON
+}
+
+enum assignment_status {
+  DRAFT
+  PUBLISHED
+}
+
+enum batch_item_type {
+  COURSE
+  BOOK
+}
+
+enum batch_status {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum billing_cycle {
+  MONTHLY
+  YEARLY
+  TWO_YEARLY
+}
+
+enum book_conversion_status {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum book_file_format {
+  EPUB
+  PDF
+}
+
+enum book_source_type {
+  PDF
+}
+
+enum book_status {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum bookmark_type {
+  COURSE
+  BOOK
+  BUNDLE
+}
+
+enum bundle_item_type {
+  COURSE
+  BOOK
+  BATCH
+  TEST_SERIES
+}
+
+enum bundle_status {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum cart_item_type {
+  COURSE
+  BOOK
+  BUNDLE
+  BATCH
+}
+
+enum certificate_status {
+  ISSUED
+  REVOKED
+}
+
+enum constraint_type {
+  BOOLEAN
+  COUNT
+  LIMIT
+}
+
+enum content_discount_type {
+  PERCENTAGE
+  FLAT
+}
+
+enum coupon_discount_type {
+  PERCENTAGE
+  FIXED
+}
+
+enum course_difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  NONE
+}
+
+enum course_mode {
+  SELF_PACED
+}
+
+enum course_status {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  SUSPENDED
+}
+
+enum course_type {
+  NORMAL
+  PROJECT
+}
+
+enum custom_code_kind {
+  SANITIZED_INLINE
+  SANDBOXED_IFRAME
+}
+
+enum discount_type {
+  NONE
+  PERCENTAGE
+  FIXED
+}
+
+enum domain_status {
+  PENDING_VERIFICATION
+  PENDING_SSL
+  ACTIVE
+  FAILED
+  REMOVING
+  REDIRECT
+}
+
+enum domain_type {
+  SUBDOMAIN
+  CUSTOM
+}
+
+enum email_message_category {
+  TRANSACTIONAL
+  NOTIFICATION
+  MARKETING
+}
+
+enum email_message_status {
+  QUEUED
+  SENT
+  DELIVERED
+  BOUNCED
+  COMPLAINED
+  REJECTED
+  FAILED
+  SUPPRESSED
+  FROZEN
+}
+
+enum email_reputation_event_trigger {
+  AUTO_BOUNCE
+  AUTO_COMPLAINT
+  AUTO_RECOVERY
+  ADMIN_OVERRIDE
+  EMERGENCY_BRAKE
+}
+
+enum email_sender_identity_status {
+  ACTIVE
+  ARCHIVED
+}
+
+enum email_sending_domain_status {
+  PENDING
+  VERIFIED
+  FAILED
+  DISABLED
+}
+
+enum email_sending_tenant_status {
+  ACTIVE
+  WARNING
+  THROTTLED
+  PAUSED
+}
+
+enum email_suppression_reason {
+  HARD_BOUNCE
+  COMPLAINT
+  MANUAL_UNSUBSCRIBE
+  ADMIN_BLOCK
+  IMPORTED
+}
+
+enum enrollment_source {
+  PURCHASED
+  FREE
+  ADMIN_GRANT
+  BUNDLE
+  COUPON
+  SUBSCRIPTION
+  BATCH
+}
+
+enum enrollment_status {
+  ACTIVE
+  COMPLETED
+  EXPIRED
+  CANCELLED
+  SUSPENDED
+}
+
+enum entitlement_sources {
+  PLAN
+  ADMIN
+  ADDON
+  PROMO
+}
+
+enum gateway_connection_status {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  DISCONNECTED
+}
+
+enum gateway_mode {
+  SELF_MANAGED
+}
+
+enum invoice_status {
+  GENERATED
+  VOIDED
+}
+
+enum invoice_type {
+  PLAN_SUBSCRIPTION
+  USER_PURCHASE
+}
+
+enum lesson_resource_type {
+  PDF
+  PPT
+  LINK
+  TEXT
+  IMAGE
+  GITHUB
+}
+
+enum lesson_type {
+  LECTURE
+  QUIZ
+  ASSIGNMENT
+  PDF
+  PPT
+  LINK
+  TEXT
+  IMAGE
+}
+
+enum linkable_content_type {
+  COURSE
+  BOOK
+  BUNDLE
+  PRODUCT_HUB_ITEM
+  TEST_SERIES
+  BATCH
+}
+
+enum member_notification_type {
+  BOOKING_CONFIRMED
+  BOOKING_REMINDER
+  BOOKING_CANCELLED
+  BOOKING_RESCHEDULED
+  PURCHASE_CONFIRMED
+  DM_REPLIED
+  ENROLLMENT_NEW
+  LESSON_PUBLISHED
+  ASSIGNMENT_GRADED
+  CERTIFICATE_AVAILABLE
+  SYSTEM
+  WORKSHOP_NEW_SESSION
+  DM_NEW_MESSAGE
+  DM_THREAD_CLOSED
+  CAMPAIGN
+}
+
+enum member_payment_detail_type {
+  UPI
+  BANK_TRANSFER
+  PAYPAL
+}
+
+enum member_status {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum offering_type {
+  COURSE
+  BOOK
+  TEST_SERIES
+}
+
+enum order_status {
+  CREATED
+  PAYMENT_PENDING
+  PAID
+  FAILED
+  EXPIRED
+  REFUND_INITIATED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum order_type {
+  COURSE
+  BOOK
+  BUNDLE
+  CART
+  BATCH
+  TEST_SERIES
+}
+
+enum orientation {
+  landscape
+  portrait
+  square
+}
+
+enum page_moderation_status {
+  ACTIVE
+  BLOCKED
+}
+
+enum page_render_mode {
+  SECTIONS
+  CUSTOM_CODE
+}
+
+enum payment_receipt_status {
+  DRAFT
+  GENERATED
+  SENT
+  CANCELLED
+}
+
+enum payment_webhook_status {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
+enum plan_type {
+  SINGLE_APP
+  BUNDLE
+  ENTERPRISE
+}
+
+enum price_entity_type {
+  COURSE
+  BOOK
+  BUNDLE
+  BATCH
+  TEST_SERIES
+}
+
+enum pricing_frequency {
+  MONTHLY
+  YEARLY
+  BOTH
+  TWO_YEARLY
+  ALL
+}
+
+enum purchase_mode {
+  FREE
+  PAID
+}
+
+enum quiz_attempt_status {
+  IN_PROGRESS
+  PASSED
+  FAILED
+}
+
+enum quiz_question_type {
+  MCQ
+  DRAG_DROP
+}
+
+enum quiz_scope {
+  COURSE
+  SECTION
+  LESSON
+}
+
+enum quiz_status {
+  DRAFT
+  PUBLISHED
+}
+
+enum refund_status {
+  INITIATED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum staff_membership_status {
+  ACTIVE
+  SUSPENDED
+  INVITED
+}
+
+enum submission_content_type {
+  TEXT
+  PDF
+}
+
+enum submission_status {
+  PENDING
+  SUBMITTED
+  UNDER_REVIEW
+  EVALUATED
+  RESUBMISSION_REQUESTED
+}
+
+enum subscription_status {
+  PENDING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+  TRIALING
+}
+
+enum tax_mode {
+  INCLUSIVE
+  EXCLUSIVE
+}
+
+enum tenant_addon_event_type {
+  PURCHASED
+  ADMIN_GRANTED_PAID
+  ADMIN_GRANTED_FREE
+  ACTIVATED
+  SUSPENDED
+  CANCELLED
+  EXPIRED
+  RENEWED
+  UPGRADED
+}
+
+enum tenant_addon_source {
+  PURCHASED
+  ADMIN_PAID
+  ADMIN_FREE
+}
+
+enum tenant_addon_status {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  SUSPENDED
+}
+
+enum tenant_app_event_type {
+  ACTIVATED
+  SUSPENDED
+  UNSUSPENDED
+  TRIAL_STARTED
+  TRIAL_EXTENDED
+  TRIAL_EXPIRED
+  CANCELLED
+  REACTIVATED
+}
+
+enum tenant_app_source {
+  SUBSCRIPTION
+  ADMIN_TRIAL
+  ADMIN_GRANT
+  PROMO
+}
+
+enum tenant_app_status {
+  ACTIVE
+  TRIALING
+  SUSPENDED
+  CANCELLED
+}
+
+enum tenant_bulk_import_scope_type {
+  TENANT
+  COURSE
+  BOOK
+  BATCH
+  TEST_SERIES
+  BUNDLE
+}
+
+enum tenant_bulk_import_source {
+  CSV
+  SELECT_EXISTING
+}
+
+enum tenant_bulk_import_status {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum tenant_status {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+enum tenant_subscription_status {
+  CREATED
+  AUTHENTICATED
+  ACTIVE
+  PENDING
+  HALTED
+  PAUSED
+  CANCELLED
+  COMPLETED
+  EXPIRED
+}
+
+enum tenant_user_status {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+  INVITED
+}
+
+enum test_answer_grading_status {
+  AUTO_GRADED
+  PENDING_REVIEW
+  MANUALLY_GRADED
+}
+
+enum test_attempt_grading_status {
+  NOT_REQUIRED
+  PENDING_REVIEW
+  COMPLETED
+}
+
+enum test_attempt_module_status {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum test_attempt_status {
+  IN_PROGRESS
+  SUBMITTED
+  AUTO_SUBMITTED
+  ON_BREAK
+}
+
+enum test_mode {
+  STANDARD
+  ADAPTIVE
+}
+
+enum test_question_created_via {
+  MANUAL
+  IMPORT
+  AI
+}
+
+enum test_question_difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum test_question_status {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum test_question_type {
+  MCQ_SINGLE
+  MCQ_MULTI
+  TRUE_FALSE
+  FIB
+  NAT
+  DRAG_DROP
+  DESCRIPTIVE
+}
+
+enum test_series_access_mode {
+  SEQUENTIAL
+  OPEN
+}
+
+enum test_series_enrollment_source {
+  PURCHASED
+  ADMIN_GRANT
+  FREE
+  BUNDLE
+}
+
+enum test_series_enrollment_status {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum test_series_pricing_type {
+  FREE
+  PAID
+}
+
+enum test_series_visibility {
+  PUBLIC
+  UNLISTED
+  PRIVATE
+}
+
+enum test_show_solutions {
+  IMMEDIATE
+  AFTER_SERIES_END
+  NEVER
+}
+
+enum test_status {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum test_taxonomy_kind {
+  SUBJECT
+  CHAPTER
+  TOPIC
+}
+
+enum testimonial_status {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum usage_event_type {
+  CONSUME
+  RELEASE
+  RESET
+}
+
+enum usage_scope_type {
+  TENANT
+  USER
+}
+
+enum usage_window_type {
+  LIFETIME
+  MONTHLY
+  YEARLY
+  DAILY
+}
+
+enum video_processing_status {
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+enum video_provider {
+  YOUTUBE
+  EVS
+  HLS
+  MP4
+}
+
+enum vote_type {
+  UPVOTE
+  DOWNVOTE
+}
+
+enum webhook_status {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+enum translatable_entity_type {
+  COURSE
+  BOOK
+  CATEGORY
+  BUNDLE
+  PAGE
+}

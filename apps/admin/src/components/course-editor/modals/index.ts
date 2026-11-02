@@ -1,0 +1,11 @@
+export { ImagePickerModal } from "./ImagePickerModal";
+export { ThumbnailPickerModal } from "./ThumbnailPickerModal";
+export { SyllabusModal } from "./SyllabusModal";
+export { MentorModal } from "./MentorModal";
+export { CategoryModal } from "./CategoryModal";
+export { FAQModal } from "./FAQModal";
+export { PricingModal } from "./PricingModal";
+export { OfferingsModal } from "./OfferingsModal";
+export { LanguageModal } from "./LanguageModal";
+export { CourseRecommendationModal } from "./CourseRecommendationModal";
+export { AIGenerateModal } from "./AIGenerateModal";
