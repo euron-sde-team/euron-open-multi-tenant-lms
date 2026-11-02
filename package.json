@@ -54,6 +54,13 @@
     "overrides": {
       "postcss@<8.5.23": "^8.5.29",
       "vite": "^7.1.12"
+    },
+    "packageExtensions": {
+      "@hookform/resolvers@3": {
+        "peerDependencies": {
+          "zod": "^3.22.0"
+        }
+      }
     }
   }
 }
