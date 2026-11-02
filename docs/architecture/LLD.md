@@ -1,8 +1,8 @@
-# Components
+# Low-level design (LLD)
 
 The apps and packages in code: how a request moves through an API, what each API runs in the
 background, and how the front ends are put together. The big picture is in
-[overview.md](overview.md). Paths are relative to the repository root.
+[HLD.md](HLD.md). Paths are relative to the repository root.
 
 ## Repository layout
 

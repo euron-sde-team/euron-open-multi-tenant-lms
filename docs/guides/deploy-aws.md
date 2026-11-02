@@ -215,7 +215,7 @@ Details and the events to subscribe to: [connect-real-providers.md](connect-real
    `custom_domain_certificate_arns`; apply.
 2. The tenant points a CNAME at the `load_balancer_dns_name` output.
 3. The tenant verifies the domain in the tenant admin. The learner API then resolves the
-   host to that tenant ([overview.md](../architecture/overview.md#4-tenant-resolution)).
+   host to that tenant ([HLD.md](../architecture/HLD.md#4-tenant-resolution)).
 
 ## Updating
 

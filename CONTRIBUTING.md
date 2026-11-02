@@ -53,7 +53,7 @@ make sanitize                          # no credentials, account ids, real email
 **Three tiers, three APIs.** Operator features go in `apps/console-api`, academy staff
 features in `apps/admin-api`, learner features in `apps/learner-api`. Each API follows routes,
 controllers, services and repositories (Kysely); services and repositories are singletons and
-repositories accept an optional transaction ([components.md](docs/architecture/components.md)).
+repositories accept an optional transaction ([LLD.md](docs/architecture/LLD.md)).
 
 **Every tenant query carries `tenant_id`.** A record from another academy is a 404. A new
 endpoint that returns academy data gets an integration test proving another academy cannot

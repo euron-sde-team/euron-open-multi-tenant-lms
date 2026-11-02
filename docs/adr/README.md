@@ -2,8 +2,8 @@
 
 Short records of the decisions that shape Euron Open Multi-Tenant LMS: the context, what was
 decided, and what it costs. The system as built is described in
-[architecture/overview.md](../architecture/overview.md) and
-[architecture/components.md](../architecture/components.md).
+[architecture/HLD.md](../architecture/HLD.md) and
+[architecture/LLD.md](../architecture/LLD.md).
 
 | ADR | Decision |
 | --- | --- |

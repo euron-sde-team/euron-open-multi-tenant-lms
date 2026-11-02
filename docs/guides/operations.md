@@ -70,7 +70,7 @@ docker compose -p open-mtlms exec postgres pg_dump -U mtlms mtlms > mtlms.sql
 ## Background jobs
 
 Jobs run inside the API processes; there is no worker service
-([components.md](../architecture/components.md#background-work)).
+([LLD.md](../architecture/LLD.md#background-work)).
 
 - **admin-api** runs its job workers on every cluster worker unless `RUN_JOB_WORKERS=false`.
   To move them off the request path, run a second admin-api service with

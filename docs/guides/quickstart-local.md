@@ -93,7 +93,7 @@ demo tenants and their data and rebuilds them.
 
 `lvh.me` and every subdomain of it resolve to `127.0.0.1`, so `<tenant>.lvh.me` works with no
 hosts file. The learner API resolves the tenant from that host
-([overview.md](../architecture/overview.md#4-tenant-resolution)). If your DNS resolver refuses
+([HLD.md](../architecture/HLD.md#4-tenant-resolution)). If your DNS resolver refuses
 `lvh.me` (some routers block names that resolve to a private address), see
 [troubleshooting.md](troubleshooting.md#tenantlvhme-does-not-load).
 

@@ -215,7 +215,7 @@ apart: each has its own app, its own API and its own sessions, over one shared s
 Three tiers, three Next.js apps, three Express APIs, one Postgres schema. Each API owns its
 tier's routes, sessions and background jobs; they share the database, Redis and a small
 internal channel (cache invalidation over Redis pub/sub and an internal API key)
-([overview.md](docs/architecture/overview.md), [ADR 0001](docs/adr/0001-three-apis-one-schema.md)).
+([HLD.md](docs/architecture/HLD.md), [ADR 0001](docs/adr/0001-three-apis-one-schema.md)).
 
 <p align="center">
   <img src="docs/assets/diagrams/request-and-tenant-resolution.svg" alt="A storefront request: the host resolves to a tenant by subdomain or custom domain, the theme is injected server-side, and every query is scoped by tenant" width="100%">
@@ -239,7 +239,7 @@ signed webhook, with verify-payment as an idempotent fallback
   <img src="docs/assets/diagrams/deployment.svg" alt="AWS deployment: an ALB with host rules in front of six ECS Fargate services, RDS Postgres, ElastiCache Redis, S3 behind CloudFront for assets, SES with SNS and SQS, Secrets Manager, KMS and a WAF" width="100%">
 </p>
 
-[components.md](docs/architecture/components.md) walks through each app and API;
+[LLD.md](docs/architecture/LLD.md) walks through each app and API;
 [data-model.md](docs/architecture/data-model.md) maps the tables.
 
 ## 🧰 Tech stack
@@ -388,7 +388,7 @@ sealed credentials, multi-currency, platform billing, tenant status and the hard
 
 | Architecture | Guides |
 | --- | --- |
-| [Overview](docs/architecture/overview.md), [components](docs/architecture/components.md), [data model](docs/architecture/data-model.md) | [Quickstart](docs/guides/quickstart-local.md), [walkthrough](docs/guides/walkthrough.md) |
+| [HLD](docs/architecture/HLD.md), [LLD](docs/architecture/LLD.md), [data model](docs/architecture/data-model.md) | [Quickstart](docs/guides/quickstart-local.md), [walkthrough](docs/guides/walkthrough.md) |
 | [Multi-tenancy and entitlements](docs/architecture/multi-tenancy-and-entitlements.md) | [Configuration](docs/guides/configuration.md), [connect real providers](docs/guides/connect-real-providers.md) |
 | [Templates and theming](docs/architecture/templates-and-theming.md), [video](docs/architecture/video.md) | [Add a template](docs/guides/add-a-template.md) |
 | [Payments and currency](docs/architecture/payments-and-currency.md), [AI authoring](docs/architecture/ai-authoring.md) | [Deploy to AWS](docs/guides/deploy-aws.md), [operations](docs/guides/operations.md) |

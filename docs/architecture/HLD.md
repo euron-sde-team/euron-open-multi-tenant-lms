@@ -1,4 +1,4 @@
-# Architecture overview
+# High-level design (HLD)
 
 Euron Open Multi-Tenant LMS (in-app brand: Open LMS Cloud) is a self-hosted, three-tier,
 multi-tenant learning platform. An operator runs one deployment and sells plans to tenants
@@ -11,7 +11,7 @@ Paths are relative to the repository root.
 
 | Topic | Page |
 | --- | --- |
-| Apps, layers, workers and queues in code | [components.md](components.md) |
+| Apps, layers, workers and queues in code | [LLD.md](LLD.md) |
 | Table groups and relationships | [data-model.md](data-model.md) |
 | Catalog, plans, the entitlement snapshot, usage counters | [multi-tenancy-and-entitlements.md](multi-tenancy-and-entitlements.md) |
 | Page JSON, the section registry, two-layer theming | [templates-and-theming.md](templates-and-theming.md) |
@@ -167,7 +167,7 @@ permission code of the route, then (for gated features) the tenant's entitlement
 | learner-api | `webhook-fulfillment`, `user-notification`, `subscription-lifecycle`, `watch-time-rollup`, the cache-bust subscriber, and a search view refresh every 5 minutes |
 
 There is no separate worker service: each API task runs a Node cluster, and the workers run
-inside it ([components.md](components.md#background-work)).
+inside it ([LLD.md](LLD.md#background-work)).
 
 ## 7. Deployment
 

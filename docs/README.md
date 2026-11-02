@@ -12,7 +12,7 @@ and variable named here is in the code.
 | --- | --- |
 | Run it on your machine in a few minutes | [guides/quickstart-local.md](guides/quickstart-local.md) |
 | See all three tiers working together | [guides/walkthrough.md](guides/walkthrough.md) |
-| Understand the design | [architecture/overview.md](architecture/overview.md) |
+| Understand the design | [architecture/HLD.md](architecture/HLD.md) |
 | Put it on AWS | [guides/deploy-aws.md](guides/deploy-aws.md) |
 | Know what is not safe yet | [architecture/security.md](architecture/security.md#known-gaps) |
 
@@ -20,8 +20,8 @@ and variable named here is in the code.
 
 | Page | Covers |
 | --- | --- |
-| [overview.md](architecture/overview.md) | Three tiers, three APIs, one database; tenant resolution by subdomain or custom domain; a request end to end |
-| [components.md](architecture/components.md) | Each app's layers (routes, controllers, services, repositories, Kysely), middleware, auth, workers and queues, front ends |
+| [HLD.md](architecture/HLD.md) | Three tiers, three APIs, one database; tenant resolution by subdomain or custom domain; a request end to end |
+| [LLD.md](architecture/LLD.md) | Each app's layers (routes, controllers, services, repositories, Kysely), middleware, auth, workers and queues, front ends |
 | [data-model.md](architecture/data-model.md) | Table groups and how they relate |
 | [multi-tenancy-and-entitlements.md](architecture/multi-tenancy-and-entitlements.md) | Catalog, immutable plan versions, the snapshot, usage counters, default deny |
 | [templates-and-theming.md](architecture/templates-and-theming.md) | JSON pages, the section registry, page templates, two-layer theming, custom-code pages |
@@ -58,9 +58,9 @@ Mermaid sources are in [diagrams/](diagrams) and rendered SVGs in
 
 | Diagram | Source | Used in |
 | --- | --- | --- |
-| System context | [context.mmd](diagrams/context.mmd) | [overview.md](architecture/overview.md) |
+| System context | [context.mmd](diagrams/context.mmd) | [HLD.md](architecture/HLD.md) |
 | Deployment on AWS | [deployment.mmd](diagrams/deployment.mmd) | [deploy-aws.md](guides/deploy-aws.md) |
-| Request and tenant resolution | [request-and-tenant-resolution.mmd](diagrams/request-and-tenant-resolution.mmd) | [overview.md](architecture/overview.md) |
+| Request and tenant resolution | [request-and-tenant-resolution.mmd](diagrams/request-and-tenant-resolution.mmd) | [HLD.md](architecture/HLD.md) |
 | Checkout and fulfillment | [checkout-and-fulfillment.mmd](diagrams/checkout-and-fulfillment.mmd) | [payments-and-currency.md](architecture/payments-and-currency.md) |
 
 To re-render after editing a source:

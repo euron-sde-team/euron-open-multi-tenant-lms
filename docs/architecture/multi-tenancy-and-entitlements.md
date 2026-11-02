@@ -14,7 +14,7 @@ per-tenant entitlements, and how usage is counted against them. The decision is
   | --- | --- |
   | console-api | None. Operators act on any tenant; the tenant id is a path parameter (`/admin/tenants/:tenantId/...`) behind operator permissions |
   | admin-api | `X-Tenant-Id`, accepted only when the signed-in staff user has an `ACTIVE` membership in that tenant (else 403 `You do not have access to this tenant`). Without the header, the user's first active membership |
-  | learner-api | The host ([overview.md](overview.md#4-tenant-resolution)) |
+  | learner-api | The host ([HLD.md](HLD.md#4-tenant-resolution)) |
 
 - Repositories filter on `tenant_id`. Many admin-api services load a row by id and then
   compare its `tenant_id` with the request's before writing; a row of another tenant answers
@@ -179,7 +179,7 @@ Coupons, certificates, currencies and gateways are not gated.
 
 The admin sidebar mirrors the server: features resolved from the tenant's applications and
 entitlements decide whether a navigation item is `active` or `locked`
-([components.md](components.md#front-ends)). The server check is the one that counts.
+([LLD.md](LLD.md#front-ends)). The server check is the one that counts.
 
 ## 6. Usage counters
 
